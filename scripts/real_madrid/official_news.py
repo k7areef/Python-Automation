@@ -108,7 +108,7 @@ if response.status_code == 200:
                         chat_id=TELEGRAM_CHAT_ID,
                         caption=caption,
                         photo_url=imageUrl,
-                        source_url=f"https://www.realmadrid.com/{url}",
+                        source_url=url,
                     )
                 )
                 print("Message sended to telegram successfully")
