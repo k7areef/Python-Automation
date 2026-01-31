@@ -14,3 +14,12 @@ def save_url(collection, url):
 
 def url_exists(collection, url):
     return collection.find_one({"article_url": url}) is not None
+
+
+# -------- CVE helpers --------
+def save_cve(collection, cve_data):
+    collection.insert_one(cve_data)
+
+
+def cve_exists(collection, cveId):
+    return collection.find_one({"cve_id": cveId}) is not None
