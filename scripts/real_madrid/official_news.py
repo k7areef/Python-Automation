@@ -10,6 +10,7 @@ from scripts.real_madrid.configs.official_news_config import (
     NEWS_URL,
     HEADERS,
     COLLECTION_NAME,
+    SOURCE_NAME,
 )
 
 load_dotenv()
@@ -115,7 +116,10 @@ if response.status_code == 200:
 
                 # Save to database:
                 print("Save url to database - Saving...")
-                save_url(collection=realMadridArticlesCollection, url=url)
+                save_url(
+                    collection=realMadridArticlesCollection,
+                    data={"article_url": url, "source": SOURCE_NAME},
+                )
                 print("Url saved to database successfully\n")
 
             print("Script End - Exitting...")

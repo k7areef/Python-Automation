@@ -8,8 +8,8 @@ def get_collection(uri, db_name, collection_name):
     return db.get_collection(collection_name)
 
 
-def save_url(collection, url):
-    collection.insert_one({"article_url": url})
+def save_url(collection, data):
+    collection.insert_one(data)
 
 
 def url_exists(collection, url):
