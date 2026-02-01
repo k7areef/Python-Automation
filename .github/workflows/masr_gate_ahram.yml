@@ -33,4 +33,4 @@ jobs:
           TELEGRAM_TOKEN_MASR_NEWS: ${{ secrets.TELEGRAM_TOKEN_MASR_NEWS }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           MONGO_URI: ${{ secrets.MONGO_URI }}
-        run: python -m scripts.masr.gate_ahram.py
+        run: python -m scripts.masr.gate_ahram
