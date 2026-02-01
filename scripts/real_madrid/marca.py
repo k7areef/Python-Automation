@@ -32,7 +32,6 @@ def getUrlData(url):
 
         soup = BeautifulSoup(response.text, "html.parser")
 
-        article = soup.find("article")
         articleBody = soup.find("div", class_="ue-l-article__body")
         articleHeaderContent = soup.find("div", class_="ue-l-article__header-content")
 
@@ -40,7 +39,7 @@ def getUrlData(url):
             print("Missing elements = Skipping")
             return None
 
-        imageEle = article.find("img", class_="ue-c-article__image")
+        imageEle = articleBody.find("img", class_="ue-c-article__image")
         titleEle = articleHeaderContent.find("h1", class_="ue-c-article__headline")
         subTitle = articleHeaderContent.find("p", class_="ue-c-article__standfirst")
         fullDescriptionEle = articleBody.find("div", class_="ue-c-article__body")
