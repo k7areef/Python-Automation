@@ -41,17 +41,37 @@ def getUrlData(url):
 
         imageEle = articleBody.find("img", class_="ue-c-article__image")
         titleEle = articleHeaderContent.find("h1", class_="ue-c-article__headline")
-        descEle = articleHeaderContent.find("p", class_="ue-c-article__standfirst")
+        subTitle = articleHeaderContent.find("p", class_="ue-c-article__standfirst")
+        fullDescriptionEle = articleBody.find("div", class_="ue-c-article__body")
 
-        if not all([imageEle, titleEle, descEle]):
+        if not all([imageEle, titleEle, subTitle]):
             print("Missing elements = Skipping")
             return None
 
         image = imageEle.get("src")
         title = translator.translate(titleEle.get_text(strip=True))
-        desc = translator.translate(descEle.get_text(strip=True))
+        subTitle = translator.translate(subTitle.get_text(strip=True))
+        fullDescription = None
+        if fullDescriptionEle:
+            pTags = fullDescriptionEle.find_all("p")
+            descriptionText = f""
+            if pTags:
+                for p in pTags:
+                    descriptionText += f"{p.get_text(strip=True)}\n"
+            fullDescription = translator.translate(descriptionText)
 
-        caption = f"<b>{title}</b>\n" f"{desc}\n\n" f"المصدر: <b>صحيفة ماركا</b>"
+        cleanDescription = (
+            f"{fullDescription[:800]}..."
+            if len(fullDescription) > 800
+            else fullDescription
+        )
+
+        caption = (
+            f"<b>{title}</b>\n\n"
+            f"{subTitle}\n\n"
+            f"{cleanDescription}\n\n"
+            f"المصدر: <b>صحيفة ماركا</b>"
+        )
         return caption, image
     except Exception:
         return None
