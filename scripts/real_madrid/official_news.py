@@ -46,7 +46,11 @@ def getUrlData(url):
         )
         image = header.find("img", class_="news-detail__img").get("src")
 
-        caption = f"<b>{title}</b>\n{desc}"
+        caption = (
+            f"<b>{title}</b>\n"
+            f"{desc}\n\n"
+            f"المصدر: <b>الموقع الرسمي لريال مدريد</b>"
+        )
         return caption, image
     except Exception:
         return None
