@@ -38,8 +38,9 @@ def getUrlData(url):
         desc = f""
         for p in pTags:
             desc += f"\n{p.get_text()}\n"
+        cleanDesc = f"{desc[:1000]}..." if len(desc) > 1000 else desc
 
-        caption = f"<b>{title}</b>\n" f"{desc}\n\n" f"المصدر: <b>{SOURCE_NAME}</b>"
+        caption = f"<b>{title}</b>\n" f"{cleanDesc}\n\n" f"المصدر: <b>{SOURCE_NAME}</b>"
         return caption, imageUrl
     except Exception:
         return None
@@ -84,14 +85,13 @@ if response.status_code == 200:
                 print("Faild to get url page - Skipping")
                 continue
             caption, imageUrl = data
-            finalCaption = f"{caption[:1000]}..." if len(caption) > 1000 else caption
             # Send to telegram:
             print("Send message to telegram - Sending...")
             asyncio.run(
                 send_photo_message(
                     token=TELEGRAM_TOKEN_MASR_NEWS,
                     chat_id=TELEGRAM_CHAT_ID,
-                    caption=finalCaption,
+                    caption=caption,
                     photo_url=imageUrl,
                     source_url=url,
                 )
