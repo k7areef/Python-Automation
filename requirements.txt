@@ -3,3 +3,4 @@ beautifulsoup4
 pymongo
 python-dotenv
 python-telegram-bot
+deep_translator
