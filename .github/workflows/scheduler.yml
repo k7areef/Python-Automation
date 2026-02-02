@@ -1,12 +1,12 @@
-name: Real Madrid AS Newspaper
+name: Run All Scripts
 
 on:
   schedule:
-    - cron: "*/17 * * * *"
+    - cron: "*/10 * * * *" # أي وقت دلوقتي
   workflow_dispatch:
 
 jobs:
-  run-script:
+  run-all:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,12 +25,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt
 
-      - name: Run As Newspaper script
-        env:
-          TELEGRAM_TOKEN_REAL_MADRID: ${{ secrets.TELEGRAM_TOKEN_REAL_MADRID }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          MONGO_URI: ${{ secrets.MONGO_URI }}
-        run: python -m scripts.real_madrid.as
+      - name: Run all scripts
+        run: |
+          python -m scripts.real_madrid.official_news
+          python -m scripts.real_madrid.marca
+          python -m scripts.real_madrid.as
+          python -m scripts.cve.nvd_api
+          python -m scripts.masr.gate_ahram
