@@ -175,7 +175,7 @@ try:
 
                 # Send to telegram:
                 print("Send message to telegram - Sending")
-                asyncio.run(
+                isSuccessSend = asyncio.run(
                     send_text_message(
                         token=TELEGRAM_TOKEN_CVE,
                         chat_id=TELEGRAM_CHAT_ID,
@@ -183,6 +183,9 @@ try:
                         source_url=f"https://www.cvedetails.com/cve/{cveId}",
                     )
                 )
+                if not isSuccessSend:
+                    print("Message not send to telegram - Skipping")
+                    continue
                 print("Message sended to telegram successfully")
 
                 print("Save CVE to database:")

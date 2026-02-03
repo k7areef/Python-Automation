@@ -111,7 +111,7 @@ if response.status_code == 200:
 
                 # Send to telegram:
                 print("Send message to telegram - Sending...")
-                asyncio.run(
+                isSuccessSend = asyncio.run(
                     send_photo_message(
                         token=TELEGRAM_TOKEN_REAL_MADRID,
                         chat_id=TELEGRAM_CHAT_ID,
@@ -120,6 +120,9 @@ if response.status_code == 200:
                         source_url=url,
                     )
                 )
+                if not isSuccessSend:
+                    print("Message not send to telegram - Skipping")
+                    continue
                 print("Message sended to telegram successfully")
 
                 # Save to database:
