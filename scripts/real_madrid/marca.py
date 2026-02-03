@@ -1,4 +1,5 @@
 import os
+import html
 import asyncio
 import requests
 from bs4 import BeautifulSoup
@@ -26,53 +27,47 @@ translator = GoogleTranslator(source="auto", target="ar")
 
 def getUrlData(url):
     try:
+
+        title = ""
+        image = ""
+        subTitle = ""
+        desc = ""
+
         response = requests.get(url, timeout=10)
         if response.status_code != 200:
             return None
 
         soup = BeautifulSoup(response.text, "html.parser")
+        article = soup.find("article")
 
-        articleBody = soup.find("div", class_="ue-l-article__body")
-        articleHeaderContent = soup.find("div", class_="ue-l-article__header-content")
-
-        if not all([articleBody, articleHeader]):
+        titleEle = article.find("h1", class_="ue-c-article__headline")
+        imageEle = article.find("img", class_="ue-c-article__image")
+        if not all([imageEle, titleEle]):
             print("Missing elements = Skipping")
             return None
 
-        imageEle = articleBody.find("img", class_="ue-c-article__image")
-        titleEle = articleHeaderContent.find("h1", class_="ue-c-article__headline")
-        subTitle = articleHeaderContent.find("p", class_="ue-c-article__standfirst")
-        fullDescriptionEle = articleBody.find("div", class_="ue-c-article__body")
-
-        if not all([imageEle, titleEle, subTitle]):
-            print("Missing elements = Skipping")
-            return None
-
-        image = imageEle.get("src")
         title = translator.translate(titleEle.get_text(strip=True))
-        subTitle = translator.translate(subTitle.get_text(strip=True))
-        fullDescription = None
-        if fullDescriptionEle:
-            pTags = fullDescriptionEle.find_all("p")
-            descriptionText = f""
-            if pTags:
-                for p in pTags:
-                    descriptionText += f"{p.get_text(strip=True)}\n"
-            fullDescription = translator.translate(descriptionText)
+        imageUrl = imageEle.get("src")
 
-        cleanDescription = (
-            f"{fullDescription[:800]}..."
-            if len(fullDescription) > 800
-            else fullDescription
-        )
+        subTitleEle = article.find("p", class_="ue-c-article__standfirst")
+        if subTitleEle:
+            subTitle = translator.translate(subTitleEle.get_text(strip=True))
+
+        pTags = article.find_all("p", class_="ue-c-article__paragraph", string=True)
+        if pTags:
+            for p in pTags:
+                desc += p.get_text(strip=True)
+
+        desc = translator.translate(desc)
+        desc = f"{desc[:800]}..." if len(desc) > 800 else desc
 
         caption = (
-            f"<b>{title}</b>\n\n"
-            f"{subTitle}\n\n"
-            f"{cleanDescription}\n\n"
-            f"المصدر: <b>صحيفة ماركا</b>"
+            f"<b>{title}</b>\n"
+            f"{f'\n{subTitle}\n' if subTitle else ''}"
+            f"{f'\n{desc}\n' if desc else ''}"
+            f"\nالمصدر: <b>صحيفة ماركا</b>"
         )
-        return caption, image
+        return caption, imageUrl
     except Exception:
         return None
 
@@ -127,7 +122,7 @@ if responseCode == 200:
                 caption, imageUrl = data
                 # Send to telegram:
                 print("Send message to telegram - Sending...")
-                asyncio.run(
+                isSuccessSend = asyncio.run(
                     send_photo_message(
                         token=TELEGRAM_TOKEN_REAL_MADRID,
                         chat_id=TELEGRAM_CHAT_ID,
@@ -136,6 +131,9 @@ if responseCode == 200:
                         source_url=url,
                     )
                 )
+                if not isSuccessSend:
+                    print("Message not send to telegram - Skipping")
+                    continue
                 print("Message sended to telegram successfully")
 
                 # Save to database:
