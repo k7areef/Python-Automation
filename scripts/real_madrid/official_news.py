@@ -51,9 +51,10 @@ def getUrlData(url):
 
         caption = (
             f"<b>{title}</b>\n"
-            f"{f'{subtitle}\n' if subtitle else ''}"
+            f"{subtitle + '\n' if subtitle else ''}"
             f"\nالمصدر: <b>الموقع الرسمي لريال مدريد</b>"
         )
+
         return caption, image
     except Exception:
         return None
