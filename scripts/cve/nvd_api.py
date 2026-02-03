@@ -4,7 +4,7 @@ import html
 import asyncio
 import requests
 from datetime import datetime
-from shared.database_service import cve_exists, get_collection, save_cve
+from shared.database_service import cve_exists, get_collection, save_to_database
 from shared.telegram_service import send_text_message
 from dotenv import load_dotenv
 from scripts.cve.nvd_api_config import (
@@ -186,7 +186,7 @@ try:
                 print("Message sended to telegram successfully")
 
                 print("Save CVE to database:")
-                save_cve(collection=cveIdsCollection, cve_data={"cve_id": cveId})
+                save_to_database(collection=cveIdsCollection, data={"cve_id": cveId})
                 print("CVE saved to database successfully - Continue \n")
 
             print("✅ All Done - Exsitting")

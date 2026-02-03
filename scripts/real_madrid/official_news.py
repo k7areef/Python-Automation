@@ -2,7 +2,7 @@ import os
 import asyncio
 import requests
 from bs4 import BeautifulSoup
-from shared.database_service import get_collection, save_url, url_exists
+from shared.database_service import get_collection, save_to_database, url_exists
 from shared.telegram_service import send_photo_message
 from dotenv import load_dotenv
 from scripts.real_madrid.configs.official_news_config import (

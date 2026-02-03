@@ -3,7 +3,7 @@ import asyncio
 import requests
 from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
-from shared.database_service import get_collection, save_url, url_exists
+from shared.database_service import get_collection, save_to_database, url_exists
 from shared.telegram_service import send_photo_message
 from dotenv import load_dotenv
 from scripts.real_madrid.configs.as_config import (

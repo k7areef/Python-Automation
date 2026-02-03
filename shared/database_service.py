@@ -8,7 +8,7 @@ def get_collection(uri, db_name, collection_name):
     return db.get_collection(collection_name)
 
 
-def save_url(collection, data):
+def save_to_database(collection, data):
     collection.insert_one(data)
 
 
@@ -17,9 +17,5 @@ def url_exists(collection, url):
 
 
 # -------- CVE helpers --------
-def save_cve(collection, cve_data):
-    collection.insert_one(cve_data)
-
-
 def cve_exists(collection, cveId):
     return collection.find_one({"cve_id": cveId}) is not None
