@@ -43,7 +43,7 @@ def getUrlData(url):
         titleEle = article.find("h1", class_="ue-c-article__headline")
         imageEle = article.find("img", class_="ue-c-article__image")
         if not all([imageEle, titleEle]):
-            print("Missing elements = Skipping")
+            print("Missing elements - Skipping")
             return None
 
         title = translator.translate(titleEle.get_text(strip=True))
@@ -53,7 +53,7 @@ def getUrlData(url):
         if subTitleEle:
             subTitle = translator.translate(subTitleEle.get_text(strip=True))
 
-        pTags = article.find_all("p", class_="ue-c-article__paragraph", string=True)
+        pTags = article.find_all("p", class_="ue-c-article__paragraph")
         if pTags:
             for p in pTags:
                 desc += p.get_text(strip=True)
