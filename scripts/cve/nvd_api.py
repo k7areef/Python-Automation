@@ -4,6 +4,7 @@ import html
 import asyncio
 import requests
 from datetime import datetime
+from deep_translator import GoogleTranslator
 from shared.database_service import cve_exists, get_collection, save_to_database
 from shared.telegram_service import send_text_message
 from dotenv import load_dotenv
@@ -22,6 +23,7 @@ MONGO_URI = os.getenv("MONGO_URI")
 NVD_API_KEY = os.getenv("NVD_API_KEY")
 if not all([TELEGRAM_TOKEN_CVE, TELEGRAM_CHAT_ID, MONGO_URI, NVD_API_KEY]):
     raise Exception("Missing environment variables")
+translator = GoogleTranslator(source="auto", target="ar")
 
 
 # Generate Report:
@@ -157,6 +159,8 @@ try:
                 integrity = reportDict.get("integrity", "UNKNOWN")
                 availability = reportDict.get("availability", "UNKNOWN")
 
+                clean_description = html.escape(clean_description)
+                clean_description = translator.translate(clean_description)
                 message = (
                     f"<b>{messageTitle} - <code>{cveId}</code>  - <code>{weaknesse}</code></b>\n\n"
                     f"<b>{clean_description[:2000]}{'...' if descriptionLen > 2000 else ''}</b>\n\n"
@@ -171,7 +175,6 @@ try:
                     f"- <b>Base Score:</b> {baseScore}\n\n"
                     f"Published at: {publishedDate.strftime('%I:%M %p, %A, %d-%m-%Y')}"
                 )
-                safeMessage = html.escape(message)
 
                 # Send to telegram:
                 print("Send message to telegram - Sending")
@@ -179,7 +182,7 @@ try:
                     send_text_message(
                         token=TELEGRAM_TOKEN_CVE,
                         chat_id=TELEGRAM_CHAT_ID,
-                        text=safeMessage,
+                        text=message,
                         source_url=f"https://www.cvedetails.com/cve/{cveId}",
                     )
                 )
