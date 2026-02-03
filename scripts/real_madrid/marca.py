@@ -61,11 +61,11 @@ def getUrlData(url):
         desc = translator.translate(desc)
         desc = f"{desc[:800]}..." if len(desc) > 800 else desc
 
+        subTitle = ("\n" + subTitle + "\n") if subTitle else ""
+        desc = "\n" + desc + "\n" if desc else ""
+
         caption = (
-            f"<b>{title}</b>\n"
-            f"{('\n' + subTitle + '\n') if subTitle else ''}"
-            f"{'\n' + desc + '\n' if desc else ''}"
-            f"\nالمصدر: <b>صحيفة ماركا</b>"
+            f"<b>{title}</b>\n" f"{subTitle}" f"{desc}" f"\nالمصدر: <b>صحيفة ماركا</b>"
         )
         return caption, imageUrl
     except Exception:

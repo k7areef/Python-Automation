@@ -49,9 +49,11 @@ def getUrlData(url):
         if subtitleEle:
             subtitle = subtitleEle.find("p").get_text(strip=True)
 
+        subtitle = subtitle + "\n" if subtitle else ""
+
         caption = (
             f"<b>{title}</b>\n"
-            f"{subtitle + '\n' if subtitle else ''}"
+            f"{subtitle}"
             f"\nالمصدر: <b>الموقع الرسمي لريال مدريد</b>"
         )
 
