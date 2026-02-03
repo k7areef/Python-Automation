@@ -25,6 +25,11 @@ if not all([TELEGRAM_TOKEN_REAL_MADRID, TELEGRAM_CHAT_ID, MONGO_URI]):
 
 def getUrlData(url):
     try:
+
+        title = ""
+        image = ""
+        subtitle = ""
+
         response = requests.get(url, timeout=10)
         if response.status_code != 200:
             return None
@@ -34,22 +39,20 @@ def getUrlData(url):
         if not article:
             return None
 
-        header = article.find("header")
-        if not header:
+        titleEle = article.find("h1")
+        imageEle = article.find("img", class_="news-detail__img")
+        if not all([titleEle, imageEle]):
             return None
-
-        title = header.find("h1").get_text(strip=True)
-        desc = (
-            header.find("div", class_="news-detail__excerpt")
-            .find("p")
-            .get_text(strip=True)
-        )
-        image = header.find("img", class_="news-detail__img").get("src")
+        title = titleEle.get_text(strip=True)
+        image = imageEle.get("src")
+        subtitleEle = article.find("div", class_="news-detail__excerpt", string=True)
+        if subtitleEle:
+            subtitle = subtitleEle.find("p").get_text(strip=True)
 
         caption = (
             f"<b>{title}</b>\n"
-            f"{desc}\n\n"
-            f"المصدر: <b>الموقع الرسمي لريال مدريد</b>"
+            f"{f'{subtitle}\n' if subtitle else ''}"
+            f"\nالمصدر: <b>الموقع الرسمي لريال مدريد</b>"
         )
         return caption, image
     except Exception:
@@ -100,6 +103,7 @@ if response.status_code == 200:
                 print("\nUrl not in database - Working")
                 data = getUrlData(url)
                 if not data:
+                    print(url)
                     print("Faild to get url page - Skipping")
                     continue
 
