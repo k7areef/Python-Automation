@@ -179,7 +179,7 @@ try:
                     send_text_message(
                         token=TELEGRAM_TOKEN_CVE,
                         chat_id=TELEGRAM_CHAT_ID,
-                        text=message,
+                        text=safeMessage,
                         source_url=f"https://www.cvedetails.com/cve/{cveId}",
                     )
                 )
