@@ -28,6 +28,13 @@ jobs:
       - run: pip install -r requirements.txt
 
       - name: Run all scripts
+        env:
+          TELEGRAM_TOKEN_CVE: ${{ secrets.TELEGRAM_TOKEN_CVE }}
+          TELEGRAM_TOKEN_MASR_NEWS: ${{ secrets.TELEGRAM_TOKEN_MASR_NEWS }}
+          TELEGRAM_TOKEN_REAL_MADRID: ${{ secrets.TELEGRAM_TOKEN_REAL_MADRID }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
           python -m scripts.real_madrid.official_news || true
           python -m scripts.real_madrid.marca || true
