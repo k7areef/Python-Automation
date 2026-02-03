@@ -1,5 +1,6 @@
 import os
 import re
+import html
 import asyncio
 import requests
 from datetime import datetime
@@ -170,6 +171,7 @@ try:
                     f"- <b>Base Score:</b> {baseScore}\n\n"
                     f"Published at: {publishedDate.strftime('%I:%M %p, %A, %d-%m-%Y')}"
                 )
+                safeMessage = html.escape(message)
 
                 # Send to telegram:
                 print("Send message to telegram - Sending")
