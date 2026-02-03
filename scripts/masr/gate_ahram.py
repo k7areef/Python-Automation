@@ -38,7 +38,7 @@ def getUrlData(url):
         desc = f""
         for p in pTags:
             desc += f"\n{p.get_text()}\n"
-        cleanDesc = f"{desc[:1000]}..." if len(desc) > 1000 else desc
+        cleanDesc = f"{desc[:800]}..." if len(desc) > 800 else desc
 
         caption = f"<b>{title}</b>\n" f"{cleanDesc}\n\n" f"المصدر: <b>{SOURCE_NAME}</b>"
         return caption, imageUrl
