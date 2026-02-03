@@ -118,7 +118,7 @@ if response.status_code == 200:
 
                 # Save to database:
                 print("Save url to database - Saving...")
-                save_url(
+                save_to_database(
                     collection=realMadridArticlesCollection,
                     data={"article_url": url, "source": SOURCE_NAME},
                 )
