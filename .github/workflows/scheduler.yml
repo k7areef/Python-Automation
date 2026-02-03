@@ -2,7 +2,7 @@ name: Run All Scripts
 
 on:
   schedule:
-    - cron: "*/10 * * * *" # أي وقت دلوقتي
+    - cron: "0,10,20,30,40,50 * * * *"
   workflow_dispatch:
 
 jobs:
