@@ -126,5 +126,7 @@ if response.status_code == 200:
                     data={"article_url": url, "source": SOURCE_NAME},
                 )
                 print("Url saved to database successfully\n")
+
+            print("\n✅ All Done - Exiting")
         except Exception as e:
             print(e)
