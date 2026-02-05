@@ -35,10 +35,18 @@ async def send_text_message(token, chat_id, text, source_url):
     keyboard = [[InlineKeyboardButton("CVE Detail", url=source_url)]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    async with bot:
-        await bot.send_message(
-            chat_id=chat_id,
-            text=text,
-            reply_markup=reply_markup,
-            parse_mode=ParseMode.HTML,
-        )
+    try:
+        async with bot:
+            await bot.send_message(
+                chat_id=chat_id,
+                text=text,
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML,
+            )
+        return True
+
+    except TelegramError as e:
+        return False
+
+    except Exception as e:
+        return False
