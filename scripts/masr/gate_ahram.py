@@ -25,8 +25,8 @@ if not all([TELEGRAM_TOKEN_MASR_NEWS, TELEGRAM_CHAT_ID, MONGO_URI]):
 
 def getUrlData(url):
     try:
-        print("here")
         response = requests.get(url, headers=HEADERS, timeout=10)
+        print(response.status_code)
         if response.status_code != 200:
             return None
 
