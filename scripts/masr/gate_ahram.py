@@ -80,10 +80,12 @@ if response.status_code == 200:
                 print("Url in database - Skipping")
                 continue
             print("\nUrl not in database - Working")
-            caption, imageUrl = getUrlData(url)
-            if not all([caption, imageUrl]):
+            data = getUrlData(url)
+            if not data:
                 print("Faild to get url page - Continue")
                 continue
+            print(data)
+            caption, imageUrl = data
             # Send to telegram:
             print("Send message to telegram - Sending...")
             isSuccessSend = asyncio.run(
