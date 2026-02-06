@@ -28,6 +28,7 @@ def getUrlData(url):
         response = requests.get(url, headers=HEADERS, timeout=10)
         if response.status_code != 200:
             return None
+        print("here")
 
         soup = BeautifulSoup(response.text, "html.parser")
         title = soup.find("h1", id="ContentPlaceHolder1_divTitle").get_text()

@@ -68,7 +68,8 @@ def getUrlData(url):
             f"<b>{title}</b>\n" f"{subTitle}" f"{desc}" f"\nالمصدر: <b>صحيفة ماركا</b>"
         )
         return caption, imageUrl
-    except Exception:
+    except Exception as e:
+        print(f"Exception ERR: {e}")
         return None
 
 
@@ -112,12 +113,11 @@ if responseCode == 200:
 
             for url in newsLinks:
                 if url_exists(collection=realMadridArticlesCollection, url=url):
-                    print("Url in database - Skipping")
+                    print("Url in database - Continue")
                     continue
                 print("\nUrl not in database - Working")
                 data = getUrlData(url)
                 if not data:
-                    print(f"Url For Check: {url}")
                     continue
                 caption, imageUrl = data
                 # Send to telegram:
