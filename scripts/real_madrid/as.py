@@ -26,31 +26,40 @@ translator = GoogleTranslator(source="auto", target="ar")
 
 def getUrlData(url):
     try:
+
+        title = ""
+        imageUrl = ""
+        desc = ""
+
         response = requests.get(url, timeout=10)
         if response.status_code != 200:
             return None
 
         soup = BeautifulSoup(response.text, "html.parser")
-        articleContainer = soup.find("div", class_="wr-c")
-        article = articleContainer.find("article")
+        article = soup.find("article")
         if not article:
             return None
 
-        header = article.find("header")
-        if not header:
+        titleEle = article.find("h1", class_="a_t")
+        imageContainerEle = article.find("div", class_="a_e_m")
+        if not all([titleEle, imageContainerEle]):
             return None
-        textContainer = header.find("div", class_="a_e_txt")
-        title = translator.translate(
-            textContainer.find("h1", class_="a_t").get_text(strip=True)
-        )
-        desc = translator.translate(
-            textContainer.find(class_="a_st").get_text(strip=True)
-        )
-        imageContainer = header.find("div", class_="a_e_m")
-        image = imageContainer.find("img").get("src")
 
-        caption = f"<b>{title}</b>\n" f"{desc}\n\n" f"المصدر: <b>صحيفة اّس</b>"
-        return caption, image
+        descEle = article.find(class_="a_st")
+
+        title = translator.translate(titleEle.get_text(strip=True))
+        if descEle:
+            desc = translator.translate(descEle.get_text(strip=True))
+        imageUrl = imageContainerEle.find("img").get("src")
+
+        if desc:
+            if len(desc) > 800:
+                desc = f"{desc[0:800]}...\n\n"
+            else:
+                desc = f"{desc}\n\n"
+
+        caption = f"<b>{title}</b>\n" f"{desc}" f"المصدر: <b>صحيفة اّس</b>"
+        return caption, imageUrl
     except Exception:
         return None
 
@@ -94,6 +103,7 @@ if response.status_code == 200:
             print(f"Get articles from database successfully\n")
 
             for url in newsLinks:
+                print(url)
                 if url_exists(collection=realMadridArticlesCollection, url=url):
                     print("Url in database - Skipping")
                     continue

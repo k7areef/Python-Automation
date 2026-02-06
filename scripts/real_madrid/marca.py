@@ -29,7 +29,7 @@ def getUrlData(url):
     try:
 
         title = ""
-        image = ""
+        imageUrl = ""
         subTitle = ""
         desc = ""
 
