@@ -23,9 +23,11 @@ async def send_photo_message(token, chat_id, caption, photo_url, source_url):
         return True
 
     except TelegramError as e:
+        print(f"SEND TELEGRAM ERR: {e}")
         return False
 
     except Exception as e:
+        print(f"SEND TELEGRAM ERR: {e}")
         return False
 
 
@@ -46,7 +48,9 @@ async def send_text_message(token, chat_id, text, source_url):
         return True
 
     except TelegramError as e:
+        print(f"SEND TELEGRAM ERR: {e}")
         return False
 
     except Exception as e:
+        print(f"SEND TELEGRAM ERR: {e}")
         return False
