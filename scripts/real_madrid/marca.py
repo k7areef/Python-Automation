@@ -43,7 +43,7 @@ def getUrlData(url):
         titleEle = article.find("h1", class_="ue-c-article__headline")
         imageEle = article.find("img", class_="ue-c-article__image")
         if not all([imageEle, titleEle]):
-            print("Missing elements - Skipping")
+            print("Missing elements - Skipping\n")
             return None
 
         title = translator.translate(titleEle.get_text(strip=True))
@@ -83,7 +83,7 @@ response = requests.get(
 responseCode = response.status_code
 
 if responseCode == 200:
-    print(f"Response Sucess: CODE IS: {responseCode}\n")
+    print(f"Response Sucess: CODE IS: {responseCode}")
     soup = BeautifulSoup(response.text, "html.parser")
     articles = soup.find_all("article")
     newsLinks = []
@@ -115,7 +115,7 @@ if responseCode == 200:
                 if url_exists(collection=realMadridArticlesCollection, url=url):
                     print("Url in database - Continue")
                     continue
-                print("\nUrl not in database - Working")
+                print("Url not in database - Working")
                 data = getUrlData(url)
                 if not data:
                     continue
@@ -132,7 +132,7 @@ if responseCode == 200:
                     )
                 )
                 if not isSuccessSend:
-                    print("Message not send to telegram - Skipping")
+                    print("Message not send to telegram - Skipping\n")
                     continue
                 print("Message sended to telegram successfully")
 
@@ -143,6 +143,6 @@ if responseCode == 200:
                     data={"article_url": url, "source": SOURCE_NAME},
                 )
                 print("Url saved to database successfully")
-            print("\n✅ All Done - Exiting")
+            print("✅ All Done - Exiting")
         except Exception as e:
             print(e)

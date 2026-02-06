@@ -103,7 +103,7 @@ if response.status_code == 200:
                 if url_exists(collection=realMadridArticlesCollection, url=url):
                     print("Url in database - Skipping")
                     continue
-                print("\nUrl not in database - Working")
+                print("Url not in database - Working")
                 data = getUrlData(url)
                 if not data:
                     print(url)
