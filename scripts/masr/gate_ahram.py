@@ -42,7 +42,7 @@ def getUrlData(url):
 
         caption = f"<b>{title}</b>\n" f"{cleanDesc}\n\n" f"المصدر: <b>{SOURCE_NAME}</b>"
         return caption, imageUrl
-    except Exception:
+    except Exception as e:
         print("ERROR in getUrlData:", e)
         return None
 
