@@ -3,7 +3,7 @@ name: Run All Scripts
 on:
   workflow_dispatch:
   repository_dispatch:
-    types: [trigger-all-scripts]
+    types: [Run All Scripts]
 
 jobs:
   run-all:
