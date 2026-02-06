@@ -25,7 +25,7 @@ if not all([TELEGRAM_TOKEN_MASR_NEWS, TELEGRAM_CHAT_ID, MONGO_URI]):
 
 def getUrlData(url):
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, headers=HEADERS, timeout=10)
         if response.status_code != 200:
             return None
 
@@ -43,6 +43,7 @@ def getUrlData(url):
         caption = f"<b>{title}</b>\n" f"{cleanDesc}\n\n" f"المصدر: <b>{SOURCE_NAME}</b>"
         return caption, imageUrl
     except Exception:
+        print("ERROR in getUrlData:", e)
         return None
 
 
