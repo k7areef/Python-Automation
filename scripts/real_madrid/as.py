@@ -110,7 +110,7 @@ if response.status_code == 200:
                 print("\nUrl not in database - Working")
                 data = getUrlData(url)
                 if not data:
-                    print("Faild to get url page - Skipping")
+                    print("Faild to get url page - Skipping\n")
                     continue
                 caption, imageUrl = data
                 # Send to telegram:
@@ -125,7 +125,7 @@ if response.status_code == 200:
                     )
                 )
                 if not isSuccessSend:
-                    print("Message not send to telegram - Skipping")
+                    print("Message not send to telegram - Skipping\n")
                     continue
                 print("Message sended to telegram successfully")
 
@@ -135,8 +135,8 @@ if response.status_code == 200:
                     collection=realMadridArticlesCollection,
                     data={"article_url": url, "source": SOURCE_NAME},
                 )
-                print("Url saved to database successfully\n")
+                print("Url saved to database successfully")
 
-            print("\n✅ All Done - Exiting")
+            print("✅ All Done - Exiting")
         except Exception as e:
             print(e)

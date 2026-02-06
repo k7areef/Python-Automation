@@ -109,10 +109,10 @@ try:
 
                 isInDatabase = cve_exists(collection=cveIdsCollection, cveId=cveId)
                 if isInDatabase:
-                    print(f"- {cveId} in database - Skipping\n")
+                    print(f"- {cveId} in database - Continue\n")
                     continue
 
-                print(f"- {cveId} Not in database - Working...")
+                print(f"\n- {cveId} Not in database - Working...")
                 isMetricsDict = cve.get("metrics")
                 if not isMetricsDict:
                     print("No metrics avaliable! - Skiping\n")
@@ -193,7 +193,7 @@ try:
 
                 print("Save CVE to database:")
                 save_to_database(collection=cveIdsCollection, data={"cve_id": cveId})
-                print("CVE saved to database successfully - Continue \n")
+                print("CVE saved to database successfully")
 
             print("✅ All Done - Exsitting")
     else:
