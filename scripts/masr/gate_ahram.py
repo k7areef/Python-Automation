@@ -25,10 +25,10 @@ if not all([TELEGRAM_TOKEN_MASR_NEWS, TELEGRAM_CHAT_ID, MONGO_URI]):
 
 def getUrlData(url):
     try:
+        print("here")
         response = requests.get(url, headers=HEADERS, timeout=10)
         if response.status_code != 200:
             return None
-        print("here")
 
         soup = BeautifulSoup(response.text, "html.parser")
         title = soup.find("h1", id="ContentPlaceHolder1_divTitle").get_text()
@@ -79,7 +79,7 @@ if response.status_code == 200:
         for url in urls:
 
             if url_exists(collection=masrArticlesNews, url=url):
-                print("Url in database - Skipping")
+                print("Url in database - Continue")
                 continue
             print("\nUrl not in database - Working")
             data = getUrlData(url)
