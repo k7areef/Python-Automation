@@ -39,5 +39,5 @@ jobs:
           python -m scripts.real_madrid.official_news || true
           python -m scripts.real_madrid.marca || true
           python -m scripts.real_madrid.as || true
-          python -m scripts.masr.gate_ahram || true
           python -m scripts.cve.nvd_api || true
+          python -m scripts.masr.gate_ahram || true
