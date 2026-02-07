@@ -1,7 +1,8 @@
 import os
-import html
+import re
 import asyncio
 import requests
+from io import BytesIO
 from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
 from shared.database_service import get_collection, save_to_database, url_exists
@@ -29,7 +30,6 @@ def getUrlData(url):
     try:
 
         title = ""
-        imageUrl = ""
         subTitle = ""
         desc = ""
 
@@ -41,13 +41,11 @@ def getUrlData(url):
         article = soup.find("article")
 
         titleEle = article.find("h1", class_="ue-c-article__headline")
-        imageEle = article.find("img", class_="ue-c-article__image")
-        if not all([imageEle, titleEle]):
+        if not titleEle:
             print("Missing elements - Skipping\n")
             return None
 
         title = translator.translate(titleEle.get_text(strip=True))
-        imageUrl = imageEle.get("src")
 
         subTitleEle = article.find("p", class_="ue-c-article__standfirst")
         if subTitleEle:
@@ -67,7 +65,7 @@ def getUrlData(url):
         caption = (
             f"<b>{title}</b>\n" f"{subTitle}" f"{desc}" f"\nالمصدر: <b>صحيفة ماركا</b>"
         )
-        return caption, imageUrl
+        return caption
     except Exception as e:
         print(f"Exception ERR: {e}")
         return None
@@ -86,63 +84,77 @@ if responseCode == 200:
     print(f"Response Sucess: CODE IS: {responseCode}")
     soup = BeautifulSoup(response.text, "html.parser")
     articles = soup.find_all("article")
+    articlesImages = {}
     newsLinks = []
 
-    for article in articles:
-        articleHeader = article.find("header")
-        if not articleHeader:
-            continue
-        aTag = articleHeader.find("a")
-        if not articleHeader:
-            continue
-        url = aTag.get("href")
-        if not url:
-            continue
-        newsLinks.append(url)
-    if newsLinks:
-        # Reverse URLS:
-        newsLinks.reverse()
+    if articles:
+        for article in articles:
+            articleHeader = article.find("header")
+            if not articleHeader:
+                continue
+            aTag = articleHeader.find("a")
+            if not articleHeader:
+                continue
+            url = aTag.get("href")
+            if not url:
+                continue
+            newsLinks.append(url)
 
-        try:
+            imageEle = article.find("img", class_="ue-c-cover-content__image")
+            if not imageEle:
+                continue
+            imageSrc = imageEle.get("src")
+            articlesImages[url] = imageSrc
+        if newsLinks:
+            # Reverse URLS:
+            newsLinks.reverse()
 
-            print("Getting articles from database...")
-            realMadridArticlesCollection = get_collection(
-                uri=MONGO_URI, collection_name=COLLECTION_NAME, db_name="my_db"
-            )
-            print(f"Get articles from database successfully\n")
+            try:
 
-            for url in newsLinks:
-                if url_exists(collection=realMadridArticlesCollection, url=url):
-                    print("Url in database - Continue")
-                    continue
-                print("Url not in database - Working")
-                data = getUrlData(url)
-                if not data:
-                    continue
-                caption, imageUrl = data
-                # Send to telegram:
-                print("Send message to telegram - Sending...")
-                isSuccessSend = asyncio.run(
-                    send_photo_message(
-                        token=TELEGRAM_TOKEN_REAL_MADRID,
-                        chat_id=TELEGRAM_CHAT_ID,
-                        caption=caption,
-                        photo_url=imageUrl,
-                        source_url=url,
+                print("Getting articles from database...")
+                realMadridArticlesCollection = get_collection(
+                    uri=MONGO_URI, collection_name=COLLECTION_NAME, db_name="my_db"
+                )
+                print(f"Get articles from database successfully\n")
+
+                for url in newsLinks:
+                    if url_exists(collection=realMadridArticlesCollection, url=url):
+                        print("Url in database - Continue")
+                        continue
+                    print("Url not in database - Working")
+                    caption = getUrlData(url)
+                    if not caption:
+                        continue
+                    imageUrl = articlesImages.get(url)
+                    imageUrl = re.sub(r"(?<!:)//", "/", imageUrl)
+                    imageResponse = requests.get(imageUrl, headers=HEADERS)
+                    if not imageResponse.status_code == 200:
+                        print("Fail to get image - Continue")
+                        continue
+                    photo = BytesIO(imageResponse.content)
+                    # Send to telegram:
+                    print("Send message to telegram - Sending...")
+                    isSuccessSend = asyncio.run(
+                        send_photo_message(
+                            token=TELEGRAM_TOKEN_REAL_MADRID,
+                            chat_id=TELEGRAM_CHAT_ID,
+                            caption=caption,
+                            photo_url=photo,
+                            source_url=url,
+                        )
                     )
-                )
-                if not isSuccessSend:
-                    print("Message not send to telegram - Skipping\n")
-                    continue
-                print("Message sended to telegram successfully")
+                    if not isSuccessSend:
+                        print("Message not send to telegram - Skipping\n")
+                        continue
+                    print("Message sended to telegram successfully")
 
-                # Save to database:
-                print("Save url to database - Saving...")
-                save_to_database(
-                    collection=realMadridArticlesCollection,
-                    data={"article_url": url, "source": SOURCE_NAME},
-                )
-                print("Url saved to database successfully")
-            print("✅ All Done - Exiting")
-        except Exception as e:
-            print(e)
+                    # Save to database:
+                    print("Save url to database - Saving...")
+                    save_to_database(
+                        collection=realMadridArticlesCollection,
+                        data={"article_url": url, "source": SOURCE_NAME},
+                    )
+                    print("Url saved to database successfully")
+                print("✅ All Done - Exiting")
+            except Exception as e:
+                print(e)
