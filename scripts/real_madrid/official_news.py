@@ -83,7 +83,7 @@ def getArticleData(url):
 
 
 # Start Print:
-print("official_news Script is Running")
+print("Run Real Madrid.Official News Script")
 # Start Request:
 response = requests.get(
     url=NEWS_URL,
