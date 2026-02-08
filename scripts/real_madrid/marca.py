@@ -32,6 +32,8 @@ def getUrlData(url):
         title = ""
         subTitle = ""
         desc = ""
+        authorName = ""
+        publishedAt = ""
 
         response = requests.get(url, timeout=10)
         if response.status_code != 200:
@@ -57,13 +59,27 @@ def getUrlData(url):
                 desc += p.get_text(strip=True)
 
         desc = translator.translate(desc)
-        desc = f"{desc[:800]}..." if len(desc) > 800 else desc
+        desc = f"{desc[:700]}..." if len(desc) > 700 else desc
+
+        # Author:
+        authorEle = article.find("div", class_="ue-c-article__byline-name")
+        authorName = translator.translate(authorEle.get_text(strip=True))
+
+        # Published At:
+        publishedAtEle = article.find("div", class_="ue-c-article__publishdate")
+        if publishedAtEle:
+            publishedAt = " ".join(publishedAtEle.get_text().split())
+            publishedAt = translator.translate(publishedAt)
 
         subTitle = ("\n" + subTitle + "\n") if subTitle else ""
         desc = "\n" + desc + "\n" if desc else ""
 
         caption = (
-            f"<b>{title}</b>\n" f"{subTitle}" f"{desc}" f"\nالمصدر: <b>صحيفة ماركا</b>"
+            f"<b>نشر {authorName} عبر صحيفة ماركا</b>\n\n"
+            f"<b>{title}</b>\n"
+            f"{subTitle}"
+            f"{desc}"
+            f"\n\n{publishedAt}"
         )
         return caption
     except Exception as e:
@@ -81,11 +97,13 @@ response = requests.get(
 responseCode = response.status_code
 
 if responseCode == 200:
+
+    # Start
     print(f"Response Sucess: CODE IS: {responseCode}")
     soup = BeautifulSoup(response.text, "html.parser")
     articles = soup.find_all("article")
     articlesImages = {}
-    newsLinks = []
+    urls = []
 
     if articles:
         for article in articles:
@@ -98,63 +116,72 @@ if responseCode == 200:
             url = aTag.get("href")
             if not url:
                 continue
-            newsLinks.append(url)
+            urls.append(url)
 
             imageEle = article.find("img", class_="ue-c-cover-content__image")
             if not imageEle:
                 continue
             imageSrc = imageEle.get("src")
             articlesImages[url] = imageSrc
-        if newsLinks:
-            # Reverse URLS:
-            newsLinks.reverse()
+    else:
+        raise Exception("No articles avaliable - Exitting...")
 
-            try:
+    if urls:
+        # Reverse URLS:
+        urls.reverse()
 
-                print("Getting articles from database...")
-                realMadridArticlesCollection = get_collection(
-                    uri=MONGO_URI, collection_name=COLLECTION_NAME, db_name="my_db"
+        try:
+
+            print("Getting articles from database...")
+            realMadridArticlesCollection = get_collection(
+                uri=MONGO_URI, collection_name=COLLECTION_NAME, db_name="my_db"
+            )
+            print(f"Get articles from database successfully\n")
+
+            for url in urls:
+                if url_exists(collection=realMadridArticlesCollection, url=url):
+                    print("Url in database - Continue")
+                    continue
+                print("Url not in database - Working")
+                caption = getUrlData(url)
+                if not caption:
+                    continue
+                imageUrl = articlesImages.get(url)
+                imageUrl = re.sub(r"(?<!:)//", "/", imageUrl)
+                imageResponse = requests.get(imageUrl, headers=HEADERS)
+                if not imageResponse.status_code == 200:
+                    print("Fail to get image - Continue")
+                    continue
+                photo = BytesIO(imageResponse.content)
+                # Send to telegram:
+                print("Send message to telegram - Sending...")
+                isSuccessSend = asyncio.run(
+                    send_photo_message(
+                        token=TELEGRAM_TOKEN_REAL_MADRID,
+                        chat_id=TELEGRAM_CHAT_ID,
+                        caption=caption,
+                        photo_url=photo,
+                        source_url=url,
+                    )
                 )
-                print(f"Get articles from database successfully\n")
+                if not isSuccessSend:
+                    print("Message not send to telegram - Skipping\n")
+                    continue
+                print("Message sended to telegram successfully")
 
-                for url in newsLinks:
-                    if url_exists(collection=realMadridArticlesCollection, url=url):
-                        print("Url in database - Continue")
-                        continue
-                    print("Url not in database - Working")
-                    caption = getUrlData(url)
-                    if not caption:
-                        continue
-                    imageUrl = articlesImages.get(url)
-                    imageUrl = re.sub(r"(?<!:)//", "/", imageUrl)
-                    imageResponse = requests.get(imageUrl, headers=HEADERS)
-                    if not imageResponse.status_code == 200:
-                        print("Fail to get image - Continue")
-                        continue
-                    photo = BytesIO(imageResponse.content)
-                    # Send to telegram:
-                    print("Send message to telegram - Sending...")
-                    isSuccessSend = asyncio.run(
-                        send_photo_message(
-                            token=TELEGRAM_TOKEN_REAL_MADRID,
-                            chat_id=TELEGRAM_CHAT_ID,
-                            caption=caption,
-                            photo_url=photo,
-                            source_url=url,
-                        )
-                    )
-                    if not isSuccessSend:
-                        print("Message not send to telegram - Skipping\n")
-                        continue
-                    print("Message sended to telegram successfully")
+                # Save to database:
+                print("Save url to database - Saving...")
+                save_to_database(
+                    collection=realMadridArticlesCollection,
+                    data={"article_url": url, "source": SOURCE_NAME},
+                )
+                print("Url saved to database successfully")
+            print("✅ All Done - Exiting")
+        except Exception as e:
+            print(e)
+    else:
+        raise Exception("Urls not avalibale - Exitting...")
+    # End
 
-                    # Save to database:
-                    print("Save url to database - Saving...")
-                    save_to_database(
-                        collection=realMadridArticlesCollection,
-                        data={"article_url": url, "source": SOURCE_NAME},
-                    )
-                    print("Url saved to database successfully")
-                print("✅ All Done - Exiting")
-            except Exception as e:
-                print(e)
+else:
+    raise Exception(f"🚫 Request Fail: {response.status_code} - Exitting...")
