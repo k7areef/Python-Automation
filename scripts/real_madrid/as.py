@@ -58,7 +58,7 @@ def getUrlData(url):
             else:
                 desc = f"{desc}\n\n"
 
-        caption = f"<b>{title}</b>\n" f"{desc}" f"المصدر: <b>صحيفة اّس</b>"
+        caption = f"<b>نشرت صحيفة اّس</b>\n\n" f"<b>{title}</b>\n" f"{desc}"
         return caption, imageUrl
     except Exception:
         return None
