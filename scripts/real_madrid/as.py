@@ -29,7 +29,9 @@ def getUrlData(url):
 
         title = ""
         imageUrl = ""
-        desc = ""
+        subTitle = ""
+        authorName = ""
+        publishedAt = ""
 
         response = requests.get(url, timeout=10)
         if response.status_code != 200:
@@ -40,31 +42,45 @@ def getUrlData(url):
         if not article:
             return None
 
+        # Image and Title:
         titleEle = article.find("h1", class_="a_t")
         imageContainerEle = article.find("div", class_="a_e_m")
         if not all([titleEle, imageContainerEle]):
             return None
-
-        descEle = article.find(class_="a_st")
-
         title = translator.translate(titleEle.get_text(strip=True))
-        if descEle:
-            desc = translator.translate(descEle.get_text(strip=True))
         imageUrl = imageContainerEle.find("img").get("src")
 
-        if desc:
-            if len(desc) > 800:
-                desc = f"{desc[0:800]}...\n\n"
-            else:
-                desc = f"{desc}\n\n"
+        # Author:
+        authorEle = article.find("a", class_="a_md_a_n")
+        authorName = translator.translate(authorEle.get_text(strip=True))
 
-        caption = f"<b>نشرت صحيفة اّس</b>\n\n" f"<b>{title}</b>\n" f"{desc}"
+        # Description:
+        subTitle = article.find(class_="a_st")
+        if subTitle:
+            subTitle = translator.translate(subTitle.get_text(strip=True))
+        if subTitle:
+            if len(subTitle) > 800:
+                subTitle = f"{subTitle[:800]}...\n\n"
+            else:
+                subTitle = f"\n\n{subTitle}"
+
+        # Published At:
+        publishedAtEle = article.find("div", class_="a_md_f")
+        if publishedAtEle:
+            publishedAt = translator.translate(publishedAtEle.get_text(strip=True))
+
+        caption = (
+            f"<b>نشر {authorName} عبر صحيفة اَس</b>\n\n"
+            f"<b>{title}</b>"
+            f"{subTitle}"
+            f"\n\n{publishedAt}"
+        )
         return caption, imageUrl
     except Exception:
         return None
 
 
-print("as Script is Running...")
+print("Run Real Madrid.As Script")
 
 response = requests.get(
     url=NEWS_URL,
@@ -72,27 +88,31 @@ response = requests.get(
     timeout=10,
 )
 if response.status_code == 200:
+
+    # Start
     soup = BeautifulSoup(response.text, "html.parser")
     linksContainer = soup.find("div", class_="b_gr b_gr-nh")
     articles = linksContainer.find_all("div", class_="s_h")
+    urls = []
 
-    newsLinks = []
+    if articles:
+        for article in articles:
+            hTag = article.find("h3", class_="s_t")
+            if not hTag:
+                continue
+            aTag = hTag.find("a")
+            if not hTag:
+                continue
+            url = aTag.get("href")
+            if not url:
+                continue
+            urls.append(url)
+    else:
+        print("No articles avaliable - Exitting...")
 
-    for article in articles:
-        hTag = article.find("h3", class_="s_t")
-        if not hTag:
-            continue
-        aTag = hTag.find("a")
-        if not hTag:
-            continue
-        url = aTag.get("href")
-        if not url:
-            continue
-        newsLinks.append(url)
-
-    if newsLinks:
+    if urls:
         # Reverse URLS:
-        newsLinks.reverse()
+        urls.reverse()
 
         try:
 
@@ -102,7 +122,7 @@ if response.status_code == 200:
             )
             print(f"Get articles from database successfully\n")
 
-            for url in newsLinks:
+            for url in urls:
                 print(url)
                 if url_exists(collection=realMadridArticlesCollection, url=url):
                     print("Url in database - Skipping")
@@ -140,3 +160,9 @@ if response.status_code == 200:
             print("✅ All Done - Exiting")
         except Exception as e:
             print(e)
+    else:
+        print("Urls not avalibale - Exitting...")
+    # End
+
+else:
+    print(f"🚫 Request Fail: {response.status_code} - Exitting...")
