@@ -36,5 +36,4 @@ jobs:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
           python -m scripts.real_madrid.marca || true
-          python -m scripts.real_madrid.as || true
           python -m scripts.cve.nvd_api || true
