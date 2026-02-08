@@ -23,12 +23,14 @@ if not all([TELEGRAM_TOKEN_REAL_MADRID, TELEGRAM_CHAT_ID, MONGO_URI]):
     raise Exception("Missing environment variables")
 
 
-def getUrlData(url):
+# Get Article Data:
+def getArticleData(url):
     try:
 
         title = ""
-        image = ""
+        imageUrl = ""
         subtitle = ""
+        desc = ""
 
         response = requests.get(url, timeout=10)
         if response.status_code != 200:
@@ -39,32 +41,50 @@ def getUrlData(url):
         if not article:
             return None
 
-        titleEle = article.find("h1")
-        imageEle = article.find("img", class_="news-detail__img")
-        if not all([titleEle, imageEle]):
+        titleEle = article.find("h1", class_="news-detail__title")
+        imageEle = article.find("img", class_="news-detail__img", src=True)
+
+        if not all({titleEle, imageEle}):
+            print("🚫 Missing Elements - Skipping")
             return None
+
         title = titleEle.get_text(strip=True)
-        image = imageEle.get("src")
-        subtitleEle = article.find("div", class_="news-detail__excerpt", string=True)
+        imageUrl = imageEle.get("src")
+
+        subtitleEle = article.find("div", class_="news-detail__excerpt")
         if subtitleEle:
             subtitle = subtitleEle.find("p").get_text(strip=True)
+            subtitle = ("\n\n" + subtitle + "\n") if subtitle else ""
 
-        subtitle = subtitle + "\n" if subtitle else ""
+        descriptionContainers = article.find_all(
+            "div", class_="news-detail__main--text"
+        )
+        if descriptionContainers:
+            for descriptionContainer in descriptionContainers:
+                pTags = descriptionContainer.find_all("p")
+                if not pTags:
+                    continue
+                for p in pTags:
+                    desc += p.get_text(strip=True)
+
+        if desc:
+            desc = "\n" + f"{desc[:800]}..." if len(desc) > 800 else desc + "\n"
 
         caption = (
-            f"<b>{title}</b>\n"
+            f"<b>نشر الموقع الرسمي لريال مدريد</b>\n\n"
+            f"<b>{title}</b>"
             f"{subtitle}"
-            f"\nالمصدر: <b>الموقع الرسمي لريال مدريد</b>"
+            f"{desc}"
         )
 
-        return caption, image
+        return caption, imageUrl
     except Exception:
         return None
 
 
-print("official_news Script is Running...")
-
-newsListsElements = []
+# Start Print:
+print("official_news Script is Running")
+# Start Request:
 response = requests.get(
     url=NEWS_URL,
     headers=HEADERS,
@@ -72,24 +92,27 @@ response = requests.get(
 )
 if response.status_code == 200:
     soup = BeautifulSoup(response.text, "html.parser")
-    newsListsElements = soup.find_all("div", class_="rm-news__list")
+    articles = soup.find_all("app-news-item")
+    articlesImages = {}
+    urls = []
 
-    if newsListsElements:
+    if articles:
+        print("Articles avalibale - Start Working\n")
+        for article in articles:
+            image = article.find("img", class_="rm-news-item__image", src=True)
+            link = article.find("a", href=True)
+            if not all([link, image]):
+                continue
+            url = link.get("href")
+            url = f"{BASE_URL}{url}"
+            urls.append(url)
+            imageUrl = image.get("src")
+            articlesImages[url] = imageUrl
+    else:
+        print("No articles avaliable - Exitting...")
 
-        urlsExtracted = []
-        newsUrlsList = []
-
-        # Extrac Urls:
-        for newsList in newsListsElements:
-            links = newsList.find_all("a", href=True)
-            for link in links:
-                urlsExtracted.append(f"{BASE_URL}{link.get('href')}")
-
-        # Set Urls:
-        urlsExtracted.reverse()
-
-        for url in urlsExtracted:
-            newsUrlsList.append(url)
+    if urls:
+        urls.reverse()
 
         try:
 
@@ -97,23 +120,24 @@ if response.status_code == 200:
             realMadridArticlesCollection = get_collection(
                 uri=MONGO_URI, collection_name=COLLECTION_NAME, db_name="my_db"
             )
-            print(f"Get articles from database successfully\n")
+            print(f"✅ Get articles from database successfully\n")
 
-            for url in newsUrlsList:
+            for url in urls:
                 if url_exists(collection=realMadridArticlesCollection, url=url):
-                    print("Url in database - Skipping")
-                    continue
-                print("Url not in database - Working")
-                data = getUrlData(url)
-                if not data:
-                    print(url)
-                    print("Faild to get url page - Skipping")
+                    print(f"\n🔗 Url: {url}")
+                    print("❗ Url in database - Skipping")
                     continue
 
+                print("\n⌛ Url not in database - Working")
+                data = getArticleData(url)
+                if not data:
+                    print(f"Url: {url}")
+                    print("🚫 Faild to get article data - Skipping")
+                    continue
                 caption, imageUrl = data
 
                 # Send to telegram:
-                print("Send message to telegram - Sending...")
+                print("- Send message to telegram - Sending...")
                 isSuccessSend = asyncio.run(
                     send_photo_message(
                         token=TELEGRAM_TOKEN_REAL_MADRID,
@@ -124,9 +148,9 @@ if response.status_code == 200:
                     )
                 )
                 if not isSuccessSend:
-                    print("Message not send to telegram - Skipping")
+                    print("- Message not send to telegram - Skipping")
                     continue
-                print("Message sended to telegram successfully")
+                print("✅ Message sended to telegram successfully")
 
                 # Save to database:
                 print("Save url to database - Saving...")
@@ -134,8 +158,12 @@ if response.status_code == 200:
                     collection=realMadridArticlesCollection,
                     data={"article_url": url, "source": SOURCE_NAME},
                 )
-                print("Url saved to database successfully\n")
+                print("✅ Url saved to database successfully")
 
-            print("Script End - Exitting...")
+            print("\n✅ Script End - Exitting...")
         except Exception as e:
             print(e)
+    else:
+        print("Urls not avalibale - Exitting...")
+else:
+    print(f"🚫 Request Fail: {response.status_code} - Exitting...")
