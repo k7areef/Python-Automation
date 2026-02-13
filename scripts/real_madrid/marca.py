@@ -74,7 +74,6 @@ def getUrlData(url):
         desc = "\n" + desc + "\n" if desc else ""
 
         caption = (
-            f"<b>نشر {authorName} عبر صحيفة ماركا</b>\n\n"
             f"<b>{title}</b>\n"
             f"{subTitle}"
             f"{desc}"
