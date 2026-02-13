@@ -80,7 +80,7 @@ def getUrlData(url):
             f"{desc}"
             f"\n\n{publishedAt}"
         )
-        return caption
+        return caption, authorName
     except Exception as e:
         print(f"Exception ERR: {e}")
         return None
@@ -142,7 +142,7 @@ if responseCode == 200:
                     print("Url in database - Continue")
                     continue
                 print("Url not in database - Working")
-                caption = getUrlData(url)
+                caption, authorName = getUrlData(url)
                 if not caption:
                     continue
                 imageUrl = articlesImages.get(url)
@@ -161,7 +161,7 @@ if responseCode == 200:
                         caption=caption,
                         photo_url=photo,
                         source_url=url,
-                        buttonText="Website"
+                        buttonText=f"{authorName} عبر صحيفة ماركا"
                     )
                 )
                 if not isSuccessSend:

@@ -144,6 +144,7 @@ if response.status_code == 200:
                         caption=caption,
                         photo_url=imageUrl,
                         source_url=url,
+                        buttonText="الموقع الرسمي لريال مدريد"
                     )
                 )
                 if not isSuccessSend:
