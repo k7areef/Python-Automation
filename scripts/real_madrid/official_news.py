@@ -64,7 +64,7 @@ def getArticleData(url):
                 pTags = descriptionContainer.find_all("p")
                 if not pTags:
                     continue
-		desc += "/n" +  pTags[0].get_text(strip=True)
+                desc += "/n" +  pTags[0].get_text(strip=True)
 
         if desc:
             desc = "\n" + f"{desc[:800]}..." if len(desc) > 800 else desc + "\n"
