@@ -70,12 +70,11 @@ def getUrlData(url):
             publishedAt = translator.translate(publishedAtEle.get_text(strip=True))
 
         caption = (
-            f"<b>نشر {authorName} عبر صحيفة اَس</b>\n\n"
             f"<b>{title}</b>"
             f"{subTitle}"
             f"\n\n{publishedAt}"
         )
-        return caption, imageUrl
+        return caption, imageUrl, authorName
     except Exception:
         return None
 
@@ -132,7 +131,7 @@ if response.status_code == 200:
                 if not data:
                     print("Faild to get url page - Skipping\n")
                     continue
-                caption, imageUrl = data
+                caption, imageUrl, authorName = data
                 # Send to telegram:
                 print("Send message to telegram - Sending...")
                 isSuccessSend = asyncio.run(
@@ -142,6 +141,7 @@ if response.status_code == 200:
                         caption=caption,
                         photo_url=imageUrl,
                         source_url=url,
+                        buttonText=f"{authorName} عبر صحيفة ٱس"
                     )
                 )
                 if not isSuccessSend:

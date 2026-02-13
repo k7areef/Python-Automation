@@ -4,10 +4,10 @@ from telegram.constants import ParseMode
 from telegram.error import TelegramError
 
 
-async def send_photo_message(token, chat_id, caption, photo_url, source_url):
+async def send_photo_message(token, chat_id, caption, photo_url, source_url, buttonText):
     bot = telegram.Bot(token)
 
-    keyboard = [[InlineKeyboardButton("الخبر كامل من الموقع الرسمي", url=source_url)]]
+    keyboard = [[InlineKeyboardButton(buttonText, url=source_url)]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     try:
