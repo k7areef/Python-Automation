@@ -149,7 +149,7 @@ try:
                 publishedDate = datetime.strptime(
                     cve.get("published"), "%Y-%m-%dT%H:%M:%S.%f"
                 )
-                messageTitle = "CRITICAL" if baseScore >= 9 else "HIGH" " ALERT"
+                messageTitle = ("🔴 CRITICAL" if baseScore >= 9 else "🟠 HIGH") + " ALERT"
                 reportDict = generate_report(cvssDataDict.get("vectorString"))
                 authRequired = reportDict.get("authRequired", "UNKNOWN")
                 attackVector = reportDict.get("attackVector", "UNKNOWN")
