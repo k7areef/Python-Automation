@@ -55,8 +55,7 @@ def getUrlData(url):
 
         pTags = article.find_all("p", class_="ue-c-article__paragraph")
         if pTags:
-            for p in pTags:
-                desc += p.get_text(strip=True)
+	    desc = pTags[0].get_text(strip=True)
 
         desc = translator.translate(desc)
         desc = f"{desc[:700]}..." if len(desc) > 700 else desc
