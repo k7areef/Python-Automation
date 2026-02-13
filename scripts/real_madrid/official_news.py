@@ -64,17 +64,12 @@ def getArticleData(url):
                 pTags = descriptionContainer.find_all("p")
                 if not pTags:
                     continue
-                desc += "\n" +  pTags[0].get_text(strip=True)
+                desc += "\n" + pTags[0].get_text(strip=True)
 
         if desc:
             desc = "\n" + f"{desc[:800]}..." if len(desc) > 800 else desc + "\n"
 
-        caption = (
-            f"<b>نشر الموقع الرسمي لريال مدريد</b>\n\n"
-            f"<b>{title}</b>"
-            f"{subtitle}"
-            f"{desc}"
-        )
+        caption = f"<b>{title}</b>" f"{subtitle}" f"{desc}"
 
         return caption, imageUrl
     except Exception:
@@ -144,7 +139,7 @@ if response.status_code == 200:
                         caption=caption,
                         photo_url=imageUrl,
                         source_url=url,
-                        buttonText="الموقع الرسمي لريال مدريد"
+                        buttonText="الموقع الرسمي لريال مدريد",
                     )
                 )
                 if not isSuccessSend:
