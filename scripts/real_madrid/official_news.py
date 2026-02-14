@@ -148,12 +148,12 @@ if response.status_code == 200:
                 print("✅ Message sended to telegram successfully")
 
                 # Save to database:
-                # print("Save url to database - Saving...")
-                # save_to_database(
-                #     collection=realMadridArticlesCollection,
-                #     data={"article_url": url, "source": SOURCE_NAME},
-                # )
-                # print("✅ Url saved to database successfully")
+                print("Save url to database - Saving...")
+                save_to_database(
+                    collection=realMadridArticlesCollection,
+                    data={"article_url": url, "source": SOURCE_NAME},
+                )
+                print("✅ Url saved to database successfully")
 
             print("\n✅ Script End - Exitting...")
         except Exception as e:
