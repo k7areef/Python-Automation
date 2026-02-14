@@ -140,7 +140,7 @@ if response.status_code == 200:
             dateParts = dateStr.split("، ")
             dateMonth = dateParts[1]
             dateDay = int(dateMonth.split(" ")[0])
-            if datetime.now().date().day == dateDay:
+            if dateDay == datetime.now().date().day:  # In case today:
                 print(f"Founded match today: {date}")
 
                 matchDec = matchDates[date]
@@ -152,7 +152,7 @@ if response.status_code == 200:
                     team2 = team1
 
                 messageText = (
-                    f"<b>مباراة اليوم - الساعة {dateParts[2]}</b>\n\n"
+                    f"<b>تذكير بمباراة اليوم - الساعة {dateParts[2]}</b>\n\n"
                     f"<b>{team1}</b> و <b>{team2}</b> - علي ملعب {location}"
                 )
 
@@ -170,7 +170,37 @@ if response.status_code == 200:
                     print("Faild to send telegram message - Continue")
                     continue
                 print("Telegram message sended successfully")
-        print("✅ Work ended successfully - Exitting...")
+            elif (dateDay - datetime.now().date().day) == 0:  # In case tomorrow:
+                matchDec = matchDates[date]
+                team1 = matchDec["team1"]
+                team2 = matchDec["team2"]
+                location = matchDec["location"]
+                if not team1 == "ريال مدريد":
+                    team1 = "ريال مدريد"
+                    team2 = team1
+
+                messageText = (
+                    f"<b>توجد مباراة غداً - الساعة {dateParts[2]}</b>\n\n"
+                    f"<b>{team1}</b> و <b>{team2}</b> - علي ملعب {location}"
+                )
+
+                print(f"Founded match tomorrow: {date}")
+                print("Send to telegram - Sending")
+                isSuccessSend = asyncio.run(
+                    send_text_message(
+                        token=TELEGRAM_TOKEN_REAL_MADRID,
+                        chat_id=TELEGRAM_CHAT_ID,
+                        text=messageText,
+                        source_url=MATCHES_URL,
+                        buttonText="الموقع الرسمي لريال مدريد",
+                    )
+                )
+                if not isSuccessSend:
+                    print("Faild to send telegram message - Continue")
+                    continue
+                print("Telegram message sended successfully")
+
+        print("\n✅ Work ended successfully - Exitting...")
     else:
         print("❗ No data avalibale - Existting")
 else:
