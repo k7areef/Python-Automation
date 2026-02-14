@@ -60,11 +60,9 @@ def getArticleData(url):
             "div", class_="news-detail__main--text"
         )
         if descriptionContainers:
-            for descriptionContainer in descriptionContainers:
-                pTags = descriptionContainer.find_all("p")
-                if not pTags:
-                    continue
-                desc += "\n" + pTags[0].get_text(strip=True)
+            pTag = descriptionContainers[0].find("p")
+            if not pTag:
+                desc += "\n" + pTag.get_text(strip=True)
 
         if desc:
             desc = "\n" + f"{desc[:800]}..." if len(desc) > 800 else desc + "\n"
