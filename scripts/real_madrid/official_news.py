@@ -53,19 +53,21 @@ def getArticleData(url):
 
         subtitleEle = article.find("div", class_="news-detail__excerpt")
         if subtitleEle:
-            subtitle = subtitleEle.find("p").get_text(strip=True)
-            subtitle = ("\n\n" + subtitle + "\n") if subtitle else ""
+            pTag = subtitleEle.find("p")
+            if pTag:
+                subtitle = pTag.get_text(strip=True)
+                subtitle = ("\n\n" + subtitle) if subtitle else ""
 
         descriptionContainers = article.find_all(
             "div", class_="news-detail__main--text"
         )
         if descriptionContainers:
             pTag = descriptionContainers[0].find("p")
-            if not pTag:
-                desc += "\n" + pTag.get_text(strip=True)
+            if pTag:
+                desc += "\n\n" + pTag.get_text(strip=True)
 
         if desc:
-            desc = "\n" + f"{desc[:800]}..." if len(desc) > 800 else desc + "\n"
+            desc = f"{desc[:800]}..." if len(desc) > 800 else desc
 
         caption = f"<b>{title}</b>" f"{subtitle}" f"{desc}"
 
@@ -146,12 +148,12 @@ if response.status_code == 200:
                 print("✅ Message sended to telegram successfully")
 
                 # Save to database:
-                print("Save url to database - Saving...")
-                save_to_database(
-                    collection=realMadridArticlesCollection,
-                    data={"article_url": url, "source": SOURCE_NAME},
-                )
-                print("✅ Url saved to database successfully")
+                # print("Save url to database - Saving...")
+                # save_to_database(
+                #     collection=realMadridArticlesCollection,
+                #     data={"article_url": url, "source": SOURCE_NAME},
+                # )
+                # print("✅ Url saved to database successfully")
 
             print("\n✅ Script End - Exitting...")
         except Exception as e:
