@@ -170,6 +170,7 @@ if response.status_code == 200:
                     print("Faild to send telegram message - Continue")
                     continue
                 print("Telegram message sended successfully")
+        print("✅ Work ended successfully - Exitting...")
     else:
         print("❗ No data avalibale - Existting")
 else:
