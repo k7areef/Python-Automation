@@ -57,7 +57,7 @@ def getUrlData(url):
         # Description:
         subTitleEle = article.find(class_="a_st")
         if subTitleEle:
-            subTitle = translator.translate(subTitle.get_text(strip=True))
+            subTitle = translator.translate(subTitleEle.get_text(strip=True))
         if subTitle:
             if len(subTitle) > 800:
                 subTitle = f"{subTitle[:800]}...\n\n"
