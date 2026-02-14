@@ -1,5 +1,6 @@
 BASE_URL = "https://www.realmadrid.com"
 NEWS_URL = f"{BASE_URL}/ar-AE/news/football/first-team?page=1"
+MATCHES_URL = f"{BASE_URL}/ar-AE/schedule"
 
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
