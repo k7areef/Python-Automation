@@ -55,8 +55,8 @@ def getUrlData(url):
         authorName = translator.translate(authorEle.get_text(strip=True))
 
         # Description:
-        subTitle = article.find(class_="a_st")
-        if subTitle:
+        subTitleEle = article.find(class_="a_st")
+        if subTitleEle:
             subTitle = translator.translate(subTitle.get_text(strip=True))
         if subTitle:
             if len(subTitle) > 800:
@@ -69,11 +69,7 @@ def getUrlData(url):
         if publishedAtEle:
             publishedAt = translator.translate(publishedAtEle.get_text(strip=True))
 
-        caption = (
-            f"<b>{title}</b>"
-            f"{subTitle}"
-            f"\n\n{publishedAt}"
-        )
+        caption = f"<b>{title}</b>" f"{subTitle}" f"\n\n{publishedAt}"
         return caption, imageUrl, authorName
     except Exception:
         return None
@@ -141,7 +137,7 @@ if response.status_code == 200:
                         caption=caption,
                         photo_url=imageUrl,
                         source_url=url,
-                        buttonText=f"{authorName} عبر صحيفة ٱس"
+                        buttonText=f"{authorName} عبر صحيفة ٱس",
                     )
                 )
                 if not isSuccessSend:
