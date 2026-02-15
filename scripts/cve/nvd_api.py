@@ -20,8 +20,7 @@ load_dotenv()
 TELEGRAM_TOKEN_CVE = os.getenv("TELEGRAM_TOKEN_CVE")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 MONGO_URI = os.getenv("MONGO_URI")
-NVD_API_KEY = os.getenv("NVD_API_KEY")
-if not all([TELEGRAM_TOKEN_CVE, TELEGRAM_CHAT_ID, MONGO_URI, NVD_API_KEY]):
+if not all([TELEGRAM_TOKEN_CVE, TELEGRAM_CHAT_ID, MONGO_URI]):
     raise Exception("Missing environment variables")
 translator = GoogleTranslator(source="auto", target="ar")
 
@@ -78,7 +77,7 @@ try:
     endTimeParam = now.strftime("%Y-%m-%dT23:59:59.999")
 
     api = API_URL
-    headers = {"apiKey": NVD_API_KEY, **HEADERS}
+    headers = {**HEADERS}
     params = {
         "pubStartDate": startTimeParam,
         "pubEndDate": endTimeParam,
