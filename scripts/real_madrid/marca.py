@@ -175,7 +175,7 @@ if responseCode == 200:
                     print("✅ Url saved to database successfully\n")
                 else:
                     print("Message failed strictly. Not saving to DB - Skipping\n")
-            print("✅ All Done - Exiting")
+            print("\n✅ All Done - Exiting")
         except Exception as e:
             print(e)
     else:
