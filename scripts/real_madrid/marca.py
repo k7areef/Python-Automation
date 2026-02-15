@@ -134,7 +134,7 @@ if responseCode == 200:
 
             for url in urls:
                 if url_exists(collection=realMadridArticlesCollection, url=url):
-                    print("☑️  Url in database - Continue")
+                    print("☑️ Url in database - Continue")
                     continue
                 print("\n⌛ Url not in database - Working")
                 data = getUrlData(url)

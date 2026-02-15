@@ -120,7 +120,7 @@ if response.status_code == 200:
             for url in urls:
                 print(url)
                 if url_exists(collection=realMadridArticlesCollection, url=url):
-                    print("☑️  Url in database - Skipping")
+                    print("☑️ Url in database - Skipping")
                     continue
                 print("\n⌛ Url not in database - Working")
                 data = getUrlData(url)
