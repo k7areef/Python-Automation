@@ -44,7 +44,8 @@ def getUrlData(url):
 
         titleEle = article.find("h1", class_="ue-c-article__headline")
         if not titleEle:
-            print("Missing elements - Skipping\n")
+            print("❗ Missing elements - Skipping")
+            print(f"🔗 URL for checking: {url}\n")
             return None
 
         title = translator.translate(titleEle.get_text(strip=True))
@@ -73,12 +74,7 @@ def getUrlData(url):
         subTitle = ("\n" + subTitle + "\n") if subTitle else ""
         desc = "\n" + desc + "\n" if desc else ""
 
-        caption = (
-            f"<b>{title}</b>\n"
-            f"{subTitle}"
-            f"{desc}"
-            f"\n\n{publishedAt}"
-        )
+        caption = f"<b>{title}</b>\n" f"{subTitle}" f"{desc}" f"\n\n{publishedAt}"
         return caption, authorName
     except Exception as e:
         print(f"Exception ERR: {e}")
@@ -138,11 +134,16 @@ if responseCode == 200:
 
             for url in urls:
                 if url_exists(collection=realMadridArticlesCollection, url=url):
-                    print("Url in database - Continue")
+                    print("☑️  Url in database - Continue")
                     continue
-                print("Url not in database - Working")
-                caption, authorName = getUrlData(url)
-                if not caption:
+                print("\n⌛ Url not in database - Working")
+                data = getUrlData(url)
+                if not data:
+                    print("❗ No data avaliable - Skipping")
+                    print(f"🔗 URL for checking: {url}\n")
+                    continue
+                caption, authorName = data
+                if not all([caption, authorName]):
                     continue
                 imageUrl = articlesImages.get(url)
                 imageUrl = re.sub(r"(?<!:)//", "/", imageUrl)
@@ -153,28 +154,27 @@ if responseCode == 200:
                 photo = BytesIO(imageResponse.content)
                 # Send to telegram:
                 print("Send message to telegram - Sending...")
-                isSuccessSend = asyncio.run(
+                status = asyncio.run(
                     send_photo_message(
                         token=TELEGRAM_TOKEN_REAL_MADRID,
                         chat_id=TELEGRAM_CHAT_ID,
                         caption=caption,
                         photo_url=photo,
                         source_url=url,
-                        buttonText=f"{authorName} عبر صحيفة ماركا"
+                        buttonText=f"{authorName} عبر صحيفة ماركا",
                     )
                 )
-                if not isSuccessSend:
-                    print("Message not send to telegram - Skipping\n")
-                    continue
-                print("Message sended to telegram successfully")
 
-                # Save to database:
-                print("Save url to database - Saving...")
-                save_to_database(
-                    collection=realMadridArticlesCollection,
-                    data={"article_url": url, "source": SOURCE_NAME},
-                )
-                print("Url saved to database successfully")
+                if status == True or status == "TIMEOUT":
+                    # Save to database:
+                    print("Save url to database - Saving...")
+                    save_to_database(
+                        collection=realMadridArticlesCollection,
+                        data={"article_url": url, "source": SOURCE_NAME},
+                    )
+                    print("✅ Url saved to database successfully\n")
+                else:
+                    print("Message failed strictly. Not saving to DB - Skipping\n")
             print("✅ All Done - Exiting")
         except Exception as e:
             print(e)

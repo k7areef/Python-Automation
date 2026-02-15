@@ -120,9 +120,9 @@ if response.status_code == 200:
             for url in urls:
                 print(url)
                 if url_exists(collection=realMadridArticlesCollection, url=url):
-                    print("Url in database - Skipping")
+                    print("☑️  Url in database - Skipping")
                     continue
-                print("\nUrl not in database - Working")
+                print("\n⌛ Url not in database - Working")
                 data = getUrlData(url)
                 if not data:
                     print("Faild to get url page - Skipping\n")
@@ -130,7 +130,7 @@ if response.status_code == 200:
                 caption, imageUrl, authorName = data
                 # Send to telegram:
                 print("Send message to telegram - Sending...")
-                isSuccessSend = asyncio.run(
+                status = asyncio.run(
                     send_photo_message(
                         token=TELEGRAM_TOKEN_REAL_MADRID,
                         chat_id=TELEGRAM_CHAT_ID,
@@ -140,20 +140,19 @@ if response.status_code == 200:
                         buttonText=f"{authorName} عبر صحيفة ٱس",
                     )
                 )
-                if not isSuccessSend:
-                    print("Message not send to telegram - Skipping\n")
-                    continue
-                print("Message sended to telegram successfully")
 
-                # Save to database:
-                print("Save url to database - Saving...")
-                save_to_database(
-                    collection=realMadridArticlesCollection,
-                    data={"article_url": url, "source": SOURCE_NAME},
-                )
-                print("Url saved to database successfully")
+                if status == True or status == "TIMEOUT":
+                    # Save to database:
+                    print("Save url to database - Saving...")
+                    save_to_database(
+                        collection=realMadridArticlesCollection,
+                        data={"article_url": url, "source": SOURCE_NAME},
+                    )
+                    print("✅ Url saved to database successfully\n")
+                else:
+                    print("Message failed strictly. Not saving to DB - Skipping\n")
 
-            print("✅ All Done - Exiting")
+            print("\n✅ All Done - Exiting")
         except Exception as e:
             print(e)
     else:
