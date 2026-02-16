@@ -168,7 +168,7 @@ if responseCode == 200:
             f"<b>⚠️ New Vulnerability Detected</b>\n\n"
             f"<b>CVE ID:</b> <code>{cveId}</code>\n"
             f"<b>Severity:</b> {baseSeverity} ( {baseScore} )\n\n"
-            f"<b>الوصف:</b>\n{(description[:600] + "...") if len(description) > 600 else description}"
+            f"<b>الوصف:</b>\n{(description[:600] + '...') if len(description) > 600 else description}"
             f"\n\n{ref_links}"
         )
 
