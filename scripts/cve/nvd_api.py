@@ -1,6 +1,4 @@
 import os
-import re
-import html
 import asyncio
 import requests
 from datetime import datetime
@@ -12,6 +10,7 @@ from scripts.cve.nvd_api_config import (
     API_URL,
     HEADERS,
     COLLECTION_NAME,
+    CVE_DETAILS_URL,
 )
 
 load_dotenv()
@@ -24,181 +23,175 @@ if not all([TELEGRAM_TOKEN_CVE, TELEGRAM_CHAT_ID, MONGO_URI]):
     raise Exception("Missing environment variables")
 translator = GoogleTranslator(source="auto", target="ar")
 
+print("\nScript Starting\n")
+now = datetime.now()
+year = now.year
+month = str(now.month).zfill(2)
+day = str(now.day).zfill(2)
+params = {
+    "resultsPerPage": 200,
+    "pubStartDate": f"{year}-{month}-{day}T00:00:00.000-00:00",
+    "pubEndDate": f"{year}-{month}-{day}T23:59:59.999-00:00",
+}
+response = requests.get(url=API_URL, headers=HEADERS, params=params)
+responseCode = response.status_code
 
-# Generate Report:
-def generate_report(vector_string):
-    mapping = {
-        "AV": {
-            "N": "NETWORK",
-            "A": "ADJACENT",
-            "L": "LOCAL",
-            "P": "PHYSICAL",
-        },
-        "PR": {
-            "N": "NONE",
-            "L": "LOW",
-            "H": "HIGH",
-        },
-        "AC": {"L": "LOW", "H": "HIGH"},
-        "E": {
-            "X": "NOT_DEFINED",
-            "U": "UNPROVEN",
-            "P": "PROOF_OF_CONCEPT",
-            "A": "ATTACKED",
-        },
-        "VC": {"H": "HIGH", "L": "LOW", "N": "NONE"},
-        "VI": {"H": "HIGH", "L": "LOW", "N": "NONE"},
-        "VA": {"H": "HIGH", "L": "LOW", "N": "NONE"},
-    }
+if responseCode == 200:
 
-    parts = {
-        p.split(":")[0]: p.split(":")[1] for p in vector_string.split("/") if ":" in p
-    }
+    # Get Data
+    print(f"✅ Request Success: {responseCode}\n")
+    responseData = response.json()
+    if not isinstance(responseData, dict):
+        raise Exception("No data avaliable => Exiting")
+    vulnerabilities = responseData.get("vulnerabilities")
+    if not vulnerabilities:
+        raise Exception("❗ Vulnerabilities list is empty => Exiting")
+    vulnerabilitiesCount = len(vulnerabilities)
+    print(f"- Vulnerabilities count: {vulnerabilitiesCount} (ready to filtering)")
 
-    report = {
-        "authRequired": mapping["PR"].get(parts.get("PR"), "Unknown"),
-        "attackVector": mapping["AV"].get(parts.get("AV"), "Unknown"),
-        "complexity": mapping["AC"].get(parts.get("AC"), "Unknown"),
-        "exploitState": mapping["E"].get(parts.get("E"), "Unknown"),
-        "confidentiality": mapping["VC"].get(parts.get("VC"), "Unknown"),
-        "integrity": mapping["VI"].get(parts.get("VI"), "Unknown"),
-        "availability": mapping["VA"].get(parts.get("VA"), "Unknown"),
-    }
+    # Filter Vulnerabilities
+    targetVulnerabilities = []
+    for vulnerability in vulnerabilities:
+        referencesExplioted = []
+        description = "No Found Description"
+        cve = vulnerability.get("cve")
+        if not cve:
+            continue
+        cveReferences = cve.get("references")
+        if not cve.get("references"):
+            continue
+        cveMetricsDict = cve.get("metrics")
+        if not isinstance(cveMetricsDict, dict):
+            continue
+        cveMetricsVersionsList = list(cveMetricsDict)
+        if not cveMetricsVersionsList:
+            continue
+        cveMetricsList = cve.get("metrics").get(cveMetricsVersionsList[0])
+        if not isinstance(cveMetricsList, list):
+            continue
+        cveMetricsData = cveMetricsList[0]
+        if not cveMetricsData:
+            continue
+        cvssData = cveMetricsData.get("cvssData")
+        if not cvssData:
+            continue
+        baseScore = cvssData.get("baseScore")
+        baseSeverity = cvssData.get("baseSeverity")
+        if not baseScore >= 7:
+            continue
 
-    return report
+        vulnStatus = cve.get("vulnStatus")
+        if not vulnStatus:
+            continue
+        valid_statuses = ["Analyzed", "Modified"]
+        if cve.get("vulnStatus") in valid_statuses:
+            for reference in cveReferences:
+                referenceTags = reference.get("tags")
+                if not referenceTags:
+                    continue
+                important_tags = [
+                    "Third Party Advisory",
+                    "Patch",
+                    "Exploit",
+                    "Vendor Advisory",
+                ]
+                for tag in referenceTags:
+                    if tag in important_tags:
+                        referencesExplioted.append(
+                            {
+                                "url": reference.get("url"),
+                                "source": reference.get("source"),
+                                "tag": tag,
+                            }
+                        )
+            if referencesExplioted:
+                cveId = cve.get("id")
+                descriptions = cve.get("descriptions")
+                vectorString = cvssData.get("vectorString")
+                if isinstance(descriptions, list):
+                    firstDescription = descriptions[0]
+                    description = firstDescription.get("value")
+                targetVulnerabilities.append(
+                    {
+                        "cve": {
+                            "id": cveId,
+                            "vectorString": vectorString,
+                            "description": description,
+                            "references": referencesExplioted,
+                            "baseScore": baseScore,
+                            "baseSeverity": baseSeverity,
+                        }
+                    }
+                )
+    if not targetVulnerabilities:
+        print("❗ No vulnerabilities apply to filter\n")
+        print("✅ Exiting")
+        exit()
+    targetVulnerabilitiesCount = len(targetVulnerabilities)
+    print(f"- Target vulnerabilities count: ({targetVulnerabilitiesCount} filtered)\n")
 
+    # Get from database
+    print("- Get cves stored in database...")
+    cvesCollection = get_collection(
+        uri=MONGO_URI, collection_name=COLLECTION_NAME, db_name="my_db"
+    )
+    print("- Get cves stored successfully.\n")
 
-print("nvd_api Script Running:\n")
-
-try:
-    # Constants:
-    now = datetime.now()
-    startTimeParam = now.strftime("%Y-%m-%dT00:00:00.000")
-    endTimeParam = now.strftime("%Y-%m-%dT23:59:59.999")
-
-    api = API_URL
-    headers = {**HEADERS}
-    params = {
-        "pubStartDate": startTimeParam,
-        "pubEndDate": endTimeParam,
-    }
-    apiResponse = requests.get(api, headers=headers, params=params)
-    responseCode = apiResponse.status_code
-    if responseCode == 200:
-
-        print("Getting CVE ids from database...")
-        cveIdsCollection = get_collection(
-            uri=MONGO_URI, collection_name=COLLECTION_NAME, db_name="my_db"
+    # Start
+    for vulnerability in targetVulnerabilities:
+        cve = vulnerability.get("cve")
+        cveId = cve.get("id")
+        if cve_exists(collection=cvesCollection, cveId=cveId):
+            print(f"- {cveId} in database - Skipping\n")
+            continue
+        description = translator.translate(
+            cve.get("description")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("&&", "&amp;")
         )
-        print(f"Get CVE ids from database successfully\n")
+        cveReferences = cve.get("references")
+        vectorString = cve.get("vectorString")
+        baseSeverity = cve.get("baseSeverity")
+        baseScore = cve.get("baseScore")
 
-        print(f"Request Success - CODE IS: {responseCode}\n")
-        apiResponseJson = apiResponse.json()
-        vulnerabilitiesList = apiResponseJson.get("vulnerabilities")
-        print(f"CVEs Count: {len(vulnerabilitiesList)}\n")
+        ref_links = ""
 
-        if vulnerabilitiesList:
-            for vulneItem in vulnerabilitiesList:
-                cve = vulneItem.get("cve", {})
+        if cveReferences:
+            for refernce in cveReferences:
+                url = refernce.get("url")
+                source = refernce.get("source")
+                tag = refernce.get("tag")
+                ref_links += f"- ({tag})\n{url}\n\n"
 
-                cveId = cve.get("id", None)
-                if not cveId:
-                    print(f"CVE id not avaliable - Skipping\n")
-                    continue
+        formatted_text = (
+            f"<b>⚠️ New Vulnerability Detected</b>\n\n"
+            f"<b>CVE ID:</b> <code>{cveId}</code>\n"
+            f"<b>Severity:</b> {baseSeverity} ( {baseScore} )\n\n"
+            f"<b>الوصف:</b>\n{(description[:600] + "...") if len(description) > 600 else description}"
+            f"\n\n{ref_links}"
+        )
 
-                isInDatabase = cve_exists(collection=cveIdsCollection, cveId=cveId)
-                if isInDatabase:
-                    print(f"- {cveId} in database - Continue\n")
-                    continue
+        print(f"- {cveId} - Base Score: {baseScore}")
+        print("📩 Sned to telegram...")
+        status = asyncio.run(
+            send_text_message(
+                token=TELEGRAM_TOKEN_CVE,
+                chat_id=TELEGRAM_CHAT_ID,
+                text=formatted_text,
+                source_url=f"{CVE_DETAILS_URL}/{cveId}/",
+                buttonText="CVE Details",
+            )
+        )
+        if status == True or status == "TIMEOUT":
+            print("☑️ Message sended to telegram successfully.\n")
+            print("📊 Save to database...")
+            save_to_database(collection=cvesCollection, data={"cve_id": cveId})
+            print("☑️ CVE saved to database successfully.\n")
+        else:
+            print("❗ Faild to send message.\n")
 
-                print(f"\n- {cveId} Not in database - Working...")
-                isMetricsDict = cve.get("metrics")
-                if not isMetricsDict:
-                    print("No metrics avaliable! - Skiping\n")
-                    continue
-
-                metricsDict = cve.get("metrics")[list(cve.get("metrics"))[0]]
-                cvssDataDict = metricsDict[0].get("cvssData")
-                baseScore = cvssDataDict.get("baseScore")
-                if baseScore < 7:
-                    print("Base Score Under 7 - Canceling\n")
-                    continue
-
-                descriptions = cve.get("descriptions", None)
-                weaknesses = cve.get("weaknesses", None)
-                references = cve.get("references", None)
-
-                if not all([descriptions, weaknesses, references]):
-                    print("Some data missing! - Skipping\n")
-                    continue
-
-                description = descriptions[0].get("value")
-                clean_description = re.sub(r"\n{3,}", "\n\n", description).strip()
-                descriptionLen = len(clean_description)
-                print(f" - Description is: {clean_description[:20]}...")
-
-                weaknesse = cve.get("weaknesses")[0].get("description")[0].get("value")
-                print(f" - Weaknesse is: {weaknesse}")
-
-                referenceUrl = cve.get("references")[0].get("url")
-                referenceSouce = cve.get("references")[0].get("source")
-                print(f" - Reference Url is: {referenceUrl}")
-                print(f" - Reference Souce is: {referenceSouce}")
-
-                publishedDate = datetime.strptime(
-                    cve.get("published"), "%Y-%m-%dT%H:%M:%S.%f"
-                )
-                messageTitle = (
-                    "🔴 CRITICAL" if baseScore >= 9 else "🟠 HIGH"
-                ) + " ALERT"
-                reportDict = generate_report(cvssDataDict.get("vectorString"))
-                authRequired = reportDict.get("authRequired", "UNKNOWN")
-                attackVector = reportDict.get("attackVector", "UNKNOWN")
-                complexity = reportDict.get("complexity", "UNKNOWN")
-                exploitState = reportDict.get("exploitState", "UNKNOWN")
-                confidentiality = reportDict.get("confidentiality", "UNKNOWN")
-                integrity = reportDict.get("integrity", "UNKNOWN")
-                availability = reportDict.get("availability", "UNKNOWN")
-
-                clean_description = html.escape(clean_description)
-                clean_description = translator.translate(clean_description)
-                message = (
-                    f"<b>{messageTitle} - <code>{cveId}</code>  - <code>{weaknesse}</code></b>\n\n"
-                    f"<b>{clean_description[:2000]}{'...' if descriptionLen > 2000 else ''}</b>\n\n"
-                    f"CVSS Details:\n"
-                    f"- <b>Auth Required:</b> {authRequired}\n"
-                    f"- <b>Attack Vector:</b> {attackVector}\n"
-                    f"- <b>Complexity:</b> {complexity}\n"
-                    f"- <b>Exploit State:</b> {exploitState}\n"
-                    f"- <b>Confidentiality:</b> {confidentiality}\n"
-                    f"- <b>Integrity:</b> {integrity}\n"
-                    f"- <b>Availability:</b> {availability}\n"
-                    f"- <b>Base Score:</b> {baseScore}\n\n"
-                    f"Published at: {publishedDate.strftime('%I:%M %p, %A, %d-%m-%Y')}"
-                )
-
-                # Send to telegram:
-                print("Send message to telegram - Sending")
-                isSuccessSend = asyncio.run(
-                    send_text_message(
-                        token=TELEGRAM_TOKEN_CVE,
-                        chat_id=TELEGRAM_CHAT_ID,
-                        text=message,
-                        source_url=f"https://www.cvedetails.com/cve/{cveId}",
-                        buttonText="CVE Details",
-                    )
-                )
-                if not isSuccessSend:
-                    print("Message not send to telegram - Skipping")
-                    continue
-                print("Message sended to telegram successfully")
-
-                print("Save CVE to database:")
-                save_to_database(collection=cveIdsCollection, data={"cve_id": cveId})
-                print("CVE saved to database successfully")
-
-            print("✅ All Done - Exsitting")
-    else:
-        print(f"Faild to get data from api! - CODE IS: {responseCode}")
-except Exception as e:
-    print(e)
+    # End
+    print("✅ Script Ended")
+else:
+    raise Exception(f"🚫 Request Faild: {responseCode} => Exiting")

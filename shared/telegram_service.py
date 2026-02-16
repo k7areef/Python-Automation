@@ -1,5 +1,5 @@
 import telegram
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions
 from telegram.constants import ParseMode
 from telegram.error import TelegramError
 
@@ -50,13 +50,18 @@ async def send_text_message(token, chat_id, text, buttonText, source_url):
                 text=text,
                 reply_markup=reply_markup,
                 parse_mode=ParseMode.HTML,
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
             )
         return True
 
-    except TelegramError as e:
-        print(f"SEND TELEGRAM ERR: {e}")
+    except telegram.error.TimedOut:
+        print("SEND TELEGRAM ERR: Timeout (Message might be sent)")
+        return "TIMEOUT"
+
+    except telegram.error.BadRequest as e:
+        print(f"SEND TELEGRAM ERR: Bad Request (Won't reach): {e}")
         return False
 
     except Exception as e:
-        print(f"SEND TELEGRAM ERR: {e}")
+        print(f"SEND TELEGRAM ERR: General Error: {e}")
         return False
