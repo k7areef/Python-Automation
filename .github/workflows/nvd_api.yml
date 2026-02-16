@@ -1,9 +1,9 @@
-name: Run CVE Scripts
+name: Run CVE NVD Api Script
 
 on:
   workflow_dispatch:
   repository_dispatch:
-    types: [Run CVE Scripts]
+    types: [Run CVE NVD Api Script]
 
 jobs:
   run-all:
@@ -27,7 +27,7 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - name: Run CVE Scripts
+      - name: Run CVE NVD Api Script
         env:
           TELEGRAM_TOKEN_CVE: ${{ secrets.TELEGRAM_TOKEN_CVE }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
