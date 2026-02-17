@@ -132,30 +132,32 @@ if response.status_code == 200:
                 matchDates[date] = {**matchDates[date], "location": location}
     else:
         print("❗ No data avalibale - Existting")
-
     # If match dates:
     if matchDates:
         for date in matchDates:
             dateStr = str(date)
             dateParts = dateStr.split("، ")
             dateMonth = dateParts[1]
+            matchTime = dateParts[2]
+            matchTime = matchTime.replace(
+                dateParts[2].split(":")[0], str((int(dateParts[2].split(":")[0]) + 1))
+            )
             dateDay = int(dateMonth.split(" ")[0])
+
+            matchDec = matchDates[date]
+            team1 = matchDec["team1"]
+            team2 = matchDec["team2"]
+            team2 = team2 if team1 == "ريال مدريد" else team1
+            team1 = "ريال مدريد"
+            location = matchDec["location"]
+            title = matchDec["title"]
             if dateDay == datetime.now().date().day:  # In case today:
                 print(f"Founded match today: {date}")
-
-                matchDec = matchDates[date]
-                team1 = matchDec["team1"]
-                team2 = matchDec["team2"]
-                location = matchDec["location"]
-                if not team1 == "ريال مدريد":
-                    team1 = "ريال مدريد"
-                    team2 = team1
-
                 messageText = (
-                    f"<b>تذكير بمباراة اليوم - الساعة {dateParts[2]}</b>\n\n"
-                    f"<b>{team1}</b> و <b>{team2}</b> - علي ملعب {location}"
+                    f"<b>تذكير بمباراة اليوم - الساعة {matchTime}</b>\n\n"
+                    f"- <b>{team1}</b> و <b>{team2}</b> - <b>{title}</b>\n\n"
+                    f"- علي ملعب {location}"
                 )
-
                 print("Send to telegram - Sending")
                 isSuccessSend = asyncio.run(
                     send_text_message(
@@ -171,19 +173,11 @@ if response.status_code == 200:
                     continue
                 print("Telegram message sended successfully")
             elif (dateDay - datetime.now().date().day) == 0:  # In case tomorrow:
-                matchDec = matchDates[date]
-                team1 = matchDec["team1"]
-                team2 = matchDec["team2"]
-                location = matchDec["location"]
-                if not team1 == "ريال مدريد":
-                    team1 = "ريال مدريد"
-                    team2 = team1
-
                 messageText = (
                     f"<b>توجد مباراة غداً - الساعة {dateParts[2]}</b>\n\n"
-                    f"<b>{team1}</b> و <b>{team2}</b> - علي ملعب {location}"
+                    f"- <b>{team1}</b> و <b>{team2}</b> - <b>{title}</b>\n\n"
+                    f"- علي ملعب {location}"
                 )
-
                 print(f"Founded match tomorrow: {date}")
                 print("Send to telegram - Sending")
                 isSuccessSend = asyncio.run(
