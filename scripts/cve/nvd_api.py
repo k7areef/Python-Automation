@@ -29,7 +29,6 @@ year = now.year
 month = str(now.month).zfill(2)
 day = str(now.day).zfill(2)
 params = {
-    "resultsPerPage": 200,
     "pubStartDate": f"{year}-{month}-{day}T00:00:00.000-00:00",
     "pubEndDate": f"{year}-{month}-{day}T23:59:59.999-00:00",
 }
