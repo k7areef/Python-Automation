@@ -20,7 +20,9 @@ TELEGRAM_TOKEN_CVE = os.getenv("TELEGRAM_TOKEN_CVE")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 MONGO_URI = os.getenv("MONGO_URI")
 if not all([TELEGRAM_TOKEN_CVE, TELEGRAM_CHAT_ID, MONGO_URI]):
-    raise Exception("Missing environment variables")
+    print("❗ Missing environment variables.\n")
+    print("✅ Exiting")
+    exit()
 translator = GoogleTranslator(source="auto", target="ar")
 
 print("\nScript Starting\n")
@@ -41,10 +43,14 @@ if responseCode == 200:
     print(f"✅ Request Success: {responseCode}\n")
     responseData = response.json()
     if not isinstance(responseData, dict):
-        raise Exception("No data avaliable => Exiting")
+        print("❗ No data avaliable.\n")
+        print("✅ Exiting")
+        exit()
     vulnerabilities = responseData.get("vulnerabilities")
     if not vulnerabilities:
-        raise Exception("❗ Vulnerabilities list is empty => Exiting")
+        print("❗ Vulnerabilities list is empty.\n")
+        print("✅ Exiting")
+        exit()
     vulnerabilitiesCount = len(vulnerabilities)
     print(f"- Vulnerabilities count: {vulnerabilitiesCount} (ready to filtering)")
 
