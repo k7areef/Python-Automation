@@ -33,4 +33,4 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           MONGO_URI: ${{ secrets.MONGO_URI }}
         run: |
-          python -m scripts.cve.nvd_api
+          python -m scripts.freelance.mostql
