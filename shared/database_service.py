@@ -16,6 +16,10 @@ def url_exists(collection, url):
     return collection.find_one({"article_url": url}) is not None
 
 
+def check_database(collection, data):
+    return collection.find_one(data) is not None
+
+
 # -------- CVE helpers --------
 def cve_exists(collection, cveId):
     return collection.find_one({"cve_id": cveId}) is not None
