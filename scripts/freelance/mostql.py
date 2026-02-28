@@ -32,7 +32,7 @@ if statusCode == 200:
     projects = soup.find_all("tr", class_="project-row")
     if projects:
         # Forbidden Words:
-        forbiddenWords = ["n8n", "bim", "ووردبريس", "wordpress", "unity"]
+        forbiddenWords = ["n8n", "bim", "ووردبريس", "wordpress", "unity", "سلة", "سله"]
         # Projects Filtered:
         projectsFiltered = []
         # Start Filteration:
