@@ -32,7 +32,19 @@ if statusCode == 200:
     projects = soup.find_all("tr", class_="project-row")
     if projects:
         # Forbidden Words:
-        forbiddenWords = ["n8n", "bim", "ووردبريس", "wordpress", "unity", "سلة", "سله"]
+        forbiddenWords = [
+            "n8n",
+            "bim",
+            "ووردبريس",
+            "wordpress",
+            "unity",
+            "سلة",
+            "سله",
+            "تطبيق",
+            "موبايل",
+            "native",
+            "بايثون",
+        ]
         # Projects Filtered:
         projectsFiltered = []
         # Start Filteration:
@@ -43,7 +55,7 @@ if statusCode == 200:
                 continue
             title = proTitleEle.get_text().strip().lower()
 
-            if not any(word in title for word in forbiddenWords):
+            if not any(word.lower() in title for word in forbiddenWords):
                 projectsFiltered.append(pro)
         if projectsFiltered:
             projectsFiltered.reverse()
