@@ -36,6 +36,7 @@ if statusCode == 200:
             "n8n",
             "bim",
             "ووردبريس",
+            "وورد بريس",
             "wordpress",
             "unity",
             "سلة",
