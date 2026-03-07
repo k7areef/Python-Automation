@@ -45,7 +45,21 @@ if statusCode == 200:
             "موبايل",
             "native",
             "بايثون",
-        ]
+            "العاب",
+            "ألعاب",
+            "لعبة",
+            "بوت",
+            "دروب",
+            "الاصطناعي",
+            "دروب شوبنق",
+            "ios",
+            "nuxt.js",
+            "astro",
+            "odoo erp",
+            "power bi",
+            "دردشة",
+            "معلومات جغرافية",
+        ]  # ! Write words as lowercase
         # Projects Filtered:
         projectsFiltered = []
         # Start Filteration:
