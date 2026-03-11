@@ -62,6 +62,7 @@ if statusCode == 200:
             "odoo",
             "أودو",
             "erp",
+            "asp",
             "power bi",
             "دردشة",
             "معلومات جغرافية",
