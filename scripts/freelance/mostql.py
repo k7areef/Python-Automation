@@ -62,6 +62,8 @@ if statusCode == 200:
             "odoo",
             "أودو",
             "erp",
+            "erb",
+            "وردبريس",
             "asp",
             "power bi",
             "دردشة",
