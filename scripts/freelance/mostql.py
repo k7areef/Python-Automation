@@ -127,7 +127,7 @@ if statusCode == 200:
                 )
 
                 # User Details:
-                tableMeta = projectSoup.find("div", class_="table-meta")
+                tableMeta = projectSoup.find("table", class_="table-meta")
                 tableTrs = tableMeta.find_all("tr")
                 signDate = tableTrs[0].find_all("td")[1].get_text(strip=True)
                 employmentRate = tableTrs[1].find_all("td")[1].get_text(strip=True)
