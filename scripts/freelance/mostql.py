@@ -131,7 +131,6 @@ if statusCode == 200:
                 tableTrs = tableMeta.find_all("tr")
                 signDate = tableTrs[0].find_all("td")[1].get_text(strip=True)
                 employmentRate = tableTrs[1].find_all("td")[1].get_text(strip=True)
-                employmentRate = float(employmentRate.strip("%"))
                 openProjects = tableTrs[2].find_all("td")[1].get_text(strip=True)
                 progressProjects = tableTrs[3].find_all("td")[1].get_text(strip=True)
                 connectionProgress = tableTrs[4].find_all("td")[1].get_text(strip=True)
