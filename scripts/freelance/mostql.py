@@ -115,14 +115,10 @@ if statusCode == 200:
                 projectDescription = ""
                 for pTag in descriptionPTags:
                     projectDescription += f"{pTag.get_text().strip()}\n"
+
+                # Project Details:
                 metaRowsEle = projectSoup.find("div", class_="meta-rows")
                 metaRows = metaRowsEle.find_all("div", class_="meta-row")
-                projectStatus = " ".join(
-                    metaRows[0].find("div", class_="meta-value").get_text().split()
-                )
-                projectPublishedAt = " ".join(
-                    metaRows[1].find("div", class_="meta-value").get_text().split()
-                )
                 projectBadget = " ".join(
                     metaRows[2].find("div", class_="meta-value").get_text().split()
                 )
@@ -130,13 +126,26 @@ if statusCode == 200:
                     metaRows[3].find("div", class_="meta-value").get_text().split()
                 )
 
+                # User Details:
+                tableMeta = projectSoup.find("div", class_="table-meta")
+                tableTrs = tableMeta.find_all("tr")
+                signDate = tableTrs[0].find_all("td")[1].get_text(strip=True)
+                employmentRate = tableTrs[1].find_all("td")[1].get_text(strip=True)
+                employmentRate = float(employmentRate.strip("%"))
+                openProjects = tableTrs[2].find_all("td")[1].get_text(strip=True)
+                progressProjects = tableTrs[3].find_all("td")[1].get_text(strip=True)
+                connectionProgress = tableTrs[4].find_all("td")[1].get_text(strip=True)
+
                 message = (
                     f"<b>{projectTitle}</b>\n\n"
                     f"{projectDescription}\n\n"
                     f"الميزانية: <b>{projectBadget}</b>\n"
                     f"مدة التنفيذ: <b>{projectDeadline}</b>\n"
-                    f"تاريخ النشر: <b>{projectPublishedAt}</b>\n"
-                    f"حالة المشروع: <b>{projectStatus}</b>\n"
+                    f"تاريخ التسجيل: <b>{signDate}</b>\n"
+                    f"معدل التوظيف: <b>{employmentRate}</b>\n"
+                    f"عدد المشاريع المفتوحة: <b>{openProjects}</b>\n"
+                    f"عدد المشاريع المكتملة: <b>{progressProjects}</b>\n"
+                    f"التواصلات الجارية: <b>{connectionProgress}</b>\n"
                 )
 
                 status = asyncio.run(
