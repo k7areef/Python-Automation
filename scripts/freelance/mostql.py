@@ -10,6 +10,7 @@ from scripts.freelance.configs.mostql_config import (
     HEADERS,
     COLLECTION_NAME,
     SOURCE_NAME,
+    FORBIDDEN_WORDS,
 )
 
 load_dotenv()
@@ -31,44 +32,6 @@ if statusCode == 200:
     soup = BeautifulSoup(content, "html.parser")
     projects = soup.find_all("tr", class_="project-row")
     if projects:
-        # Forbidden Words:
-        forbiddenWords = [
-            "n8n",
-            "bim",
-            "ووردبريس",
-            "وورد بريس",
-            "wordpress",
-            "unity",
-            "سلة",
-            "سله",
-            "تطبيق",
-            "موبايل",
-            "native",
-            "بايثون",
-            "اكسل",
-            "أكسل",
-            "excel",
-            "العاب",
-            "ألعاب",
-            "لعبة",
-            "بوت",
-            "دروب",
-            "php",
-            "الاصطناعي",
-            "دروب شوبنق",
-            "ios",
-            "nuxt.js",
-            "astro",
-            "odoo",
-            "أودو",
-            "erp",
-            "erb",
-            "وردبريس",
-            "asp",
-            "power bi",
-            "دردشة",
-            "معلومات جغرافية",
-        ]  # ! Write words as lowercase
         # Projects Filtered:
         projectsFiltered = []
         # Start Filteration:
@@ -79,7 +42,7 @@ if statusCode == 200:
                 continue
             title = proTitleEle.get_text().strip().lower()
 
-            if not any(word.lower() in title for word in forbiddenWords):
+            if not any(word.lower() in title for word in FORBIDDEN_WORDS):
                 projectsFiltered.append(pro)
         if projectsFiltered:
             projectsFiltered.reverse()
