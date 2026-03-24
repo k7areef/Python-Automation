@@ -35,6 +35,7 @@ FORBIDDEN_WORDS = [
     "erp",
     "erb",
     "وردبريس",
+    "لارافيل",
     "asp",
     "power bi",
     "دردشة",
