@@ -112,10 +112,10 @@ if statusCode == 200:
                 highlight = get_highlight(employmentRate)
 
                 message = (
-                    f"- معدل التوظيف: <b>{employmentRate} {highlight}</b>\n"
-                    f"- تاريخ التسجيل: <b>{signDate}</b>\n\n"
+                    f"معدل التوظيف: <b>{highlight} {employmentRate}</b>\n\n"
                     f"<b>{projectTitle}</b>\n\n"
                     f"{projectDescription}\n\n"
+                    f"- تاريخ التسجيل: <b>{signDate}</b>\n"
                     f"- الميزانية: <b>{projectBudget}</b>\n"
                     f"- مدة التنفيذ: <b>{projectDeadline}</b>\n"
                     f"- عدد المشاريع المفتوحة: <b>{openProjects}</b>\n"
