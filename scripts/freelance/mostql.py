@@ -22,6 +22,16 @@ MONGO_URI = os.getenv("MONGO_URI")
 if not all([TELEGRAM_TOKEN_FREELANCE, TELEGRAM_CHAT_ID, MONGO_URI]):
     raise Exception("MISSING EVNIRONMENT VARIABLES")
 
+
+# Get Highlight:
+def get_highlight(rate_str):
+    try:
+        value = float(rate_str.strip("%"))
+        return "⚠️" if value < 50 else "✅"
+    except (ValueError, AttributeError):
+        return "ℹ️"
+
+
 # Start
 response = requests.get(url=DEVELOPERMENT_URL, headers=HEADERS)
 statusCode = response.status_code
@@ -82,7 +92,7 @@ if statusCode == 200:
                 # Project Details:
                 metaRowsEle = projectSoup.find("div", class_="meta-rows")
                 metaRows = metaRowsEle.find_all("div", class_="meta-row")
-                projectBadget = " ".join(
+                projectBudget = " ".join(
                     metaRows[2].find("div", class_="meta-value").get_text().split()
                 )
                 projectDeadline = " ".join(
@@ -98,16 +108,19 @@ if statusCode == 200:
                 progressProjects = tableTrs[3].find_all("td")[1].get_text(strip=True)
                 connectionProgress = tableTrs[4].find_all("td")[1].get_text(strip=True)
 
+                # Highlight:
+                highlight = get_highlight(employmentRate)
+
                 message = (
+                    f"- معدل التوظيف: <b>{employmentRate} {highlight}</b>\n"
+                    f"- تاريخ التسجيل: <b>{signDate}</b>\n\n"
                     f"<b>{projectTitle}</b>\n\n"
                     f"{projectDescription}\n\n"
-                    f"الميزانية: <b>{projectBadget}</b>\n"
-                    f"مدة التنفيذ: <b>{projectDeadline}</b>\n"
-                    f"تاريخ التسجيل: <b>{signDate}</b>\n"
-                    f"معدل التوظيف: <b>{employmentRate}</b>\n"
-                    f"عدد المشاريع المفتوحة: <b>{openProjects}</b>\n"
-                    f"عدد المشاريع المكتملة: <b>{progressProjects}</b>\n"
-                    f"التواصلات الجارية: <b>{connectionProgress}</b>\n"
+                    f"- الميزانية: <b>{projectBudget}</b>\n"
+                    f"- مدة التنفيذ: <b>{projectDeadline}</b>\n"
+                    f"- عدد المشاريع المفتوحة: <b>{openProjects}</b>\n"
+                    f"- عدد المشاريع المكتملة: <b>{progressProjects}</b>\n"
+                    f"- التواصلات الجارية: <b>{connectionProgress}</b>\n"
                 )
 
                 status = asyncio.run(
