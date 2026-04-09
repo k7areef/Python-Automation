@@ -35,7 +35,7 @@ def get_highlight(rate_str):
 # Start
 with requests.Session() as session:
     try:
-        response = requests.get(url=DEVELOPERMENT_URL, headers=HEADERS)
+        response = session.get(url=DEVELOPERMENT_URL, headers=HEADERS)
         response.raise_for_status()
 
         status_code = response.status_code
@@ -71,9 +71,9 @@ with requests.Session() as session:
                     projectsUrlsCollection = get_collection(
                         uri=MONGO_URI, collection_name=COLLECTION_NAME, db_name="my_db"
                     )
-                except:
                     print(f"- Get Project Urls From Database Successfully\n")
-
+                except:
+                    print(f"- Faild to get projects from database\n")
                 for project in projectsFiltered:
                     projectUrlEle = project.find("a", href=True)
                     if not projectUrlEle:
@@ -87,8 +87,14 @@ with requests.Session() as session:
                         continue
 
                     # Request Project Data:
-                    projectResponse = session.get(url=projectUrl)
+                    projectResponse = session.get(url=projectUrl, headers=HEADERS)
+
+                    if projectResponse.status_code == 503:
+                        print("🚫 IP Blocked or Cloudflare detected (503). Waiting...")
+                        continue
+
                     if not projectResponse.status_code == 200:  # Check resposne status
+                        print(f"❗ Error {projectResponse.status_code}")
                         continue
 
                     projectContent = projectResponse.content
