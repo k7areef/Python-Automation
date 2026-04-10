@@ -124,6 +124,14 @@ with requests.Session() as session:
                     tableTrs = tableMeta.find_all("tr")
                     signDate = tableTrs[0].find_all("td")[1].get_text(strip=True)
                     employmentRate = tableTrs[1].find_all("td")[1].get_text(strip=True)
+                    employmentRateValue = float(employmentRate.strip("%"))
+
+                    if employmentRateValue < 50:
+                        print(
+                            f"Employment rate value less than 50% - skipping this project"
+                        )
+                        continue
+
                     openProjects = tableTrs[2].find_all("td")[1].get_text(strip=True)
                     progressProjects = (
                         tableTrs[3].find_all("td")[1].get_text(strip=True)
@@ -166,7 +174,7 @@ with requests.Session() as session:
                         print("☑️ Url Saved to Database\n")
                     else:
                         print("❗ Some Error \n")
-                print("☑️ Ended Without Errors Succesfully.")
+                print("\n✅ Ended Without Errors Succesfully.")
             else:
                 print("❗ No projects apply to filteration")
                 exit()
