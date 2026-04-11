@@ -1,6 +1,8 @@
+import re
 import os
 import asyncio
 import requests
+from datetime import datetime
 from bs4 import BeautifulSoup
 from shared.database_service import get_collection, save_to_database, check_database
 from shared.telegram_service import send_text_message
@@ -122,16 +124,30 @@ with requests.Session() as session:
                     # User Details:
                     tableMeta = projectSoup.find("table", class_="table-meta")
                     tableTrs = tableMeta.find_all("tr")
-                    signDate = tableTrs[0].find_all("td")[1].get_text(strip=True)
-                    employmentRate = tableTrs[1].find_all("td")[1].get_text(strip=True)
 
+                    # Employment rate condition
+                    employmentRate = tableTrs[1].find_all("td")[1].get_text(strip=True)
                     if not employmentRate == "لم يحسب بعد":
 
                         employmentRateValue = float(employmentRate.strip("%"))
 
                         if employmentRateValue < 50:
                             print(
-                                f"Employment rate value less than 50% - skipping this project"
+                                f"\n❗ Employment rate value less than 50% - skipping this project\n"
+                            )
+                            continue
+
+                    # Sign date condition
+                    signDate = tableTrs[0].find_all("td")[1].get_text(strip=True)
+                    match = re.search(r"\d{4}", signDate)
+                    if match:
+                        year_str = match.group()
+                        year = int(year_str)
+                        current_year = datetime.now().year
+
+                        if year < current_year:
+                            print(
+                                "\n❗ Employment equal not calculated yet but sign date is old - skipping this project\n"
                             )
                             continue
 
