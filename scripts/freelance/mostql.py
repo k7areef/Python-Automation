@@ -124,13 +124,16 @@ with requests.Session() as session:
                     tableTrs = tableMeta.find_all("tr")
                     signDate = tableTrs[0].find_all("td")[1].get_text(strip=True)
                     employmentRate = tableTrs[1].find_all("td")[1].get_text(strip=True)
-                    employmentRateValue = float(employmentRate.strip("%"))
 
-                    if employmentRateValue < 50:
-                        print(
-                            f"Employment rate value less than 50% - skipping this project"
-                        )
-                        continue
+                    if not employmentRate == "لم يحسب بعد":
+
+                        employmentRateValue = float(employmentRate.strip("%"))
+
+                        if employmentRateValue < 50:
+                            print(
+                                f"Employment rate value less than 50% - skipping this project"
+                            )
+                            continue
 
                     openProjects = tableTrs[2].find_all("td")[1].get_text(strip=True)
                     progressProjects = (
