@@ -91,8 +91,8 @@ def getUrlData(url):
 
 def fetch_urls():
     sources = [
-        ("RSS Main", "https://as.com/rss/futbol/primera.xml"),
-        ("RSS Real Madrid", "https://as.com/rss/tag/real_madrid.xml"),
+        ("RSS Football", "https://as.com/rss/futbol/primera.xml"),
+        ("RSS General", "https://as.com/rss/portada.xml"),
     ]
 
     for source_type, target_url in sources:
@@ -104,14 +104,13 @@ def fetch_urls():
                 continue
 
             urls = []
-            # استخدام html.parser المدمج لتفادي موديول lxml الناقص
-            soup = BeautifulSoup(res.text, "html.parser")
+            soup = BeautifulSoup(res.content, "xml")
             items = soup.find_all("item")
             for item in items:
                 link = item.find("link")
-                if link:
-                    href = link.get_text().strip()
-                    if href and ("/real_madrid/" in href or "/futbol/" in href):
+                if link and link.text:
+                    href = link.text.strip()
+                    if "/real_madrid/" in href or "/futbol/" in href:
                         if href not in urls:
                             urls.append(href)
 
