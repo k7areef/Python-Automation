@@ -12,7 +12,6 @@ from scripts.real_madrid.configs.as_config import (
 
 load_dotenv()
 
-# Secret Keys:
 TELEGRAM_TOKEN_REAL_MADRID = os.getenv("TELEGRAM_TOKEN_REAL_MADRID")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 MONGO_URI = os.getenv("MONGO_URI")
@@ -25,7 +24,6 @@ HEADERS = {
 }
 
 def translate_batch(texts):
-    """ترجمة مجموعة نصوص في طلب واحد لتفادي Rate Limits"""
     if not texts or not any(texts):
         return texts
 
@@ -92,11 +90,9 @@ def getUrlData(url):
         return None
 
 def fetch_urls():
-    # قائمة المصادر البديلة لقراءة الأخبار من AS
     sources = [
         ("RSS Main", "https://as.com/rss/futbol/primera.xml"),
-        ("RSS Real Madrid", "https://feeds.elpais.com/mrss-s/pages/ep/site/as.com/portada"),
-        ("Direct Scraping", "https://as.com/futbol/real_madrid/"),
+        ("RSS Real Madrid", "https://as.com/rss/tag/real_madrid.xml"),
     ]
 
     for source_type, target_url in sources:
@@ -108,20 +104,14 @@ def fetch_urls():
                 continue
 
             urls = []
-            if "xml" in res.headers.get("Content-Type", "") or "xml" in target_url:
-                soup = BeautifulSoup(res.content, "xml")
-                items = soup.find_all("item")
-                for item in items:
-                    link = item.find("link")
-                    if link and link.text:
-                        href = link.text.strip()
-                        if "/real_madrid/" in href or "/futbol/" in href:
-                            urls.append(href)
-            else:
-                soup = BeautifulSoup(res.text, "html.parser")
-                for aTag in soup.find_all("a", href=True):
-                    href = aTag["href"]
-                    if ("/futbol/real_madrid/" in href or "/futbol/20" in href) and href.endswith(".html"):
+            # استخدام html.parser المدمج لتفادي موديول lxml الناقص
+            soup = BeautifulSoup(res.text, "html.parser")
+            items = soup.find_all("item")
+            for item in items:
+                link = item.find("link")
+                if link:
+                    href = link.get_text().strip()
+                    if href and ("/real_madrid/" in href or "/futbol/" in href):
                         if href not in urls:
                             urls.append(href)
 
