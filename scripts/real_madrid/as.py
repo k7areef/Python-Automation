@@ -20,9 +20,6 @@ MONGO_URI = os.getenv("MONGO_URI")
 if not all([TELEGRAM_TOKEN_REAL_MADRID, TELEGRAM_CHAT_ID, MONGO_URI]):
     raise Exception("Missing environment variables")
 
-# رابط الـ RSS المباشر والشغال
-RSS_FEED_URL = "https://as.com/rss/futbol/real_madrid/portada.xml"
-
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
@@ -49,7 +46,6 @@ def translate_batch(texts):
             print(f"Translation ERR (Attempt {attempt + 1}): {e}")
 
     return texts
-
 
 def getUrlData(url):
     try:
@@ -95,74 +91,106 @@ def getUrlData(url):
         print(f"Exception ERR in getUrlData: {e}")
         return None
 
+def fetch_urls():
+    # قائمة المصادر البديلة لقراءة الأخبار من AS
+    sources = [
+        ("RSS Main", "https://as.com/rss/futbol/primera.xml"),
+        ("RSS Real Madrid", "https://feeds.elpais.com/mrss-s/pages/ep/site/as.com/portada"),
+        ("Direct Scraping", "https://as.com/futbol/real_madrid/"),
+    ]
+
+    for source_type, target_url in sources:
+        try:
+            print(f"Trying to fetch from: {source_type} ({target_url})")
+            res = requests.get(target_url, headers=HEADERS, timeout=10)
+            if res.status_code != 200:
+                print(f"Fail status {res.status_code} on {source_type}")
+                continue
+
+            urls = []
+            if "xml" in res.headers.get("Content-Type", "") or "xml" in target_url:
+                soup = BeautifulSoup(res.content, "xml")
+                items = soup.find_all("item")
+                for item in items:
+                    link = item.find("link")
+                    if link and link.text:
+                        href = link.text.strip()
+                        if "/real_madrid/" in href or "/futbol/" in href:
+                            urls.append(href)
+            else:
+                soup = BeautifulSoup(res.text, "html.parser")
+                for aTag in soup.find_all("a", href=True):
+                    href = aTag["href"]
+                    if ("/futbol/real_madrid/" in href or "/futbol/20" in href) and href.endswith(".html"):
+                        if href not in urls:
+                            urls.append(href)
+
+            if urls:
+                print(f"✅ Successfully fetched {len(urls)} URLs using {source_type}")
+                return urls
+
+        except Exception as e:
+            print(f"Error checking {source_type}: {e}")
+
+    return []
+
 
 print("Run Real Madrid.As Script")
 
-try:
-    response = requests.get(RSS_FEED_URL, headers=HEADERS, timeout=10)
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.content, "xml")
-        items = soup.find_all("item")
-        urls = []
+urls = fetch_urls()
 
-        for item in items:
-            link = item.find("link")
-            if link and link.text:
-                urls.append(link.text.strip())
+if urls:
+    urls.reverse()
 
-        if urls:
-            urls.reverse()
+    try:
+        print("Getting articles from database...")
+        realMadridArticlesCollection = get_collection(
+            uri=MONGO_URI, collection_name=COLLECTION_NAME, db_name="my_db"
+        )
+        print(f"Get articles from database successfully\n")
 
-            print("Getting articles from database...")
-            realMadridArticlesCollection = get_collection(
-                uri=MONGO_URI, collection_name=COLLECTION_NAME, db_name="my_db"
-            )
-            print(f"Get articles from database successfully\n")
+        for url in urls:
+            print(url)
+            if url_exists(collection=realMadridArticlesCollection, url=url):
+                print("☑️ Url in database - Skipping")
+                continue
 
-            for url in urls:
-                print(url)
-                if url_exists(collection=realMadridArticlesCollection, url=url):
-                    print("☑️ Url in database - Skipping")
-                    continue
+            print("\n⌛ Url not in database - Working")
+            data = getUrlData(url)
+            if not data:
+                print("Faild to get url page - Skipping\n")
+                continue
 
-                print("\n⌛ Url not in database - Working")
-                data = getUrlData(url)
-                if not data:
-                    print("Faild to get url page - Skipping\n")
-                    continue
+            caption, imageUrl, authorName = data
 
-                caption, imageUrl, authorName = data
+            if not imageUrl:
+                print("Missing Image URL - Skipping\n")
+                continue
 
-                if not imageUrl:
-                    print("Missing Image URL - Skipping\n")
-                    continue
-
-                print("Send message to telegram - Sending...")
-                status = asyncio.run(
-                    send_photo_message(
-                        token=TELEGRAM_TOKEN_REAL_MADRID,
-                        chat_id=TELEGRAM_CHAT_ID,
-                        caption=caption,
-                        photo_url=imageUrl,
-                        source_url=url,
-                        buttonText=f"{authorName} عبر صحيفة ٱس",
-                    )
+            print("Send message to telegram - Sending...")
+            status = asyncio.run(
+                send_photo_message(
+                    token=TELEGRAM_TOKEN_REAL_MADRID,
+                    chat_id=TELEGRAM_CHAT_ID,
+                    caption=caption,
+                    photo_url=imageUrl,
+                    source_url=url,
+                    buttonText=f"{authorName} عبر صحيفة ٱس",
                 )
+            )
 
-                if status == True or status == "TIMEOUT":
-                    print("Save url to database - Saving...")
-                    save_to_database(
-                        collection=realMadridArticlesCollection,
-                        data={"article_url": url, "source": SOURCE_NAME},
-                    )
-                    print("✅ Url saved to database successfully\n")
-                else:
-                    print("Message failed strictly. Not saving to DB - Skipping\n")
+            if status == True or status == "TIMEOUT":
+                print("Save url to database - Saving...")
+                save_to_database(
+                    collection=realMadridArticlesCollection,
+                    data={"article_url": url, "source": SOURCE_NAME},
+                )
+                print("✅ Url saved to database successfully\n")
+            else:
+                print("Message failed strictly. Not saving to DB - Skipping\n")
 
-            print("\n✅ All Done - Exiting")
-        else:
-            print("Urls not avalibale - Exitting...")
-    else:
-        print(f"🚫 Request Fail: {response.status_code} - Exitting...")
-except Exception as e:
-    print(f"Error fetching RSS: {e}")
+        print("\n✅ All Done - Exiting")
+    except Exception as e:
+        print(e)
+else:
+    print("🚫 All sources failed to return URLs - Exitting...")
