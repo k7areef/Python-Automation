@@ -28,24 +28,8 @@ if not all([TELEGRAM_TOKEN_REAL_MADRID, TELEGRAM_CHAT_ID, MONGO_URI]):
 
 translator = GoogleTranslator(source="auto", target="ar")
 
-def safe_translate(text):
-    if not text:
-        return ""
-    try:
-        time.sleep(1.5)  # Delay لمنع Rate Limit من جوجل
-        return translator.translate(text)
-    except Exception as e:
-        print(f"Translation ERR: {e}")
-        return text
-
 def getUrlData(url):
     try:
-        title = ""
-        subTitle = ""
-        desc = ""
-        authorName = ""
-        publishedAt = ""
-        
         response = requests.get(url, headers=HEADERS, timeout=10)
         if response.status_code != 200:
             return None
@@ -59,30 +43,30 @@ def getUrlData(url):
             print(f"🔗 URL for checking: {url}\n")
             return None
 
-        title = safe_translate(titleEle.get_text(strip=True))
+        raw_title = titleEle.get_text(strip=True)
 
         subTitleEle = article.find("p", class_=re.compile(r"ue-c-article__standfirst", re.I))
-        if subTitleEle:
-            subTitle = safe_translate(subTitleEle.get_text(strip=True))
+        raw_subTitle = subTitleEle.get_text(strip=True) if subTitleEle else ""
 
         pTags = article.find_all("p", class_=re.compile(r"ue-c-article__paragraph", re.I))
-        if pTags:
-            desc = pTags[0].get_text(strip=True)
-            desc = safe_translate(desc)
-            desc = f"{desc[:700]}..." if len(desc) > 700 else desc
+        raw_desc = pTags[0].get_text(strip=True) if pTags else ""
+        raw_desc = raw_desc[:700] if len(raw_desc) > 700 else raw_desc
 
-        # Author:
         authorEle = article.find("div", class_=re.compile(r"ue-c-article__byline-name", re.I)) or article.find("span", class_=re.compile(r"author", re.I))
-        if authorEle:
-            authorName = safe_translate(authorEle.get_text(strip=True))
-        else:
-            authorName = "MARCA"
+        raw_author = authorEle.get_text(strip=True) if authorEle else "MARCA"
 
-        # Published At:
         publishedAtEle = article.find("div", class_=re.compile(r"ue-c-article__publishdate", re.I))
-        if publishedAtEle:
-            publishedAt = " ".join(publishedAtEle.get_text().split())
-            publishedAt = safe_translate(publishedAt)
+        raw_publishedAt = " ".join(publishedAtEle.get_text().split()) if publishedAtEle else ""
+
+        # Batch translate all texts in ONE request to avoid Google rate limit
+        texts_to_translate = [raw_title, raw_subTitle, raw_desc, raw_author, raw_publishedAt]
+        try:
+            time.sleep(2)
+            translated_texts = translator.translate_batch(texts_to_translate)
+            title, subTitle, desc, authorName, publishedAt = translated_texts
+        except Exception as e:
+            print(f"Translation Batch ERR: {e}")
+            title, subTitle, desc, authorName, publishedAt = raw_title, raw_subTitle, raw_desc, raw_author, raw_publishedAt
 
         subTitle = ("\n" + subTitle + "\n") if subTitle else ""
         desc = "\n" + desc + "\n" if desc else ""
