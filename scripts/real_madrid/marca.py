@@ -5,6 +5,7 @@ import asyncio
 import requests
 from io import BytesIO
 from bs4 import BeautifulSoup
+from deep_translator import GoogleTranslator
 from shared.database_service import get_collection, save_to_database, url_exists
 from shared.telegram_service import send_photo_message
 from dotenv import load_dotenv
@@ -24,25 +25,16 @@ MONGO_URI = os.getenv("MONGO_URI")
 if not all([TELEGRAM_TOKEN_REAL_MADRID, TELEGRAM_CHAT_ID, MONGO_URI]):
     raise Exception("Missing environment variables")
 
+translator = GoogleTranslator(source='auto', target='ar')
+
 def safe_translate(text):
     if not text:
         return ""
     for attempt in range(3):
         try:
-            url = "https://translate.googleapis.com/translate_a/single"
-            params = {
-                "client": "gtx",
-                "sl": "es",
-                "tl": "ar",
-                "dt": "t",
-                "q": text
-            }
-            res = requests.get(url, params=params, timeout=10)
-            if res.status_code == 200:
-                result = res.json()
-                translated_text = "".join([item[0] for item in result[0] if item[0]])
-                if translated_text:
-                    return translated_text
+            translated = translator.translate(text)
+            if translated:
+                return translated
         except Exception as e:
             print(f"Translation retry {attempt + 1} failed: {e}")
             time.sleep(1)
