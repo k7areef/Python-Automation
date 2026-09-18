@@ -5,7 +5,7 @@ import asyncio
 import requests
 from io import BytesIO
 from bs4 import BeautifulSoup
-from deep_translator import GoogleTranslator
+from googletrans import Translator
 from shared.database_service import get_collection, save_to_database, url_exists
 from shared.telegram_service import send_photo_message
 from dotenv import load_dotenv
@@ -18,7 +18,6 @@ from scripts.real_madrid.configs.marca_config import (
 
 load_dotenv()
 
-# Secret Keys:
 TELEGRAM_TOKEN_REAL_MADRID = os.getenv("TELEGRAM_TOKEN_REAL_MADRID")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 MONGO_URI = os.getenv("MONGO_URI")
@@ -26,7 +25,20 @@ MONGO_URI = os.getenv("MONGO_URI")
 if not all([TELEGRAM_TOKEN_REAL_MADRID, TELEGRAM_CHAT_ID, MONGO_URI]):
     raise Exception("Missing environment variables")
 
-translator = GoogleTranslator(source="auto", target="ar")
+translator = Translator()
+
+def safe_translate(text):
+    if not text:
+        return ""
+    for attempt in range(3):
+        try:
+            res = translator.translate(text, dest="ar")
+            if res and res.text:
+                return res.text
+        except Exception as e:
+            print(f"Translation retry {attempt + 1} failed: {e}")
+            time.sleep(2)
+    return text
 
 def getUrlData(url):
     try:
@@ -44,29 +56,23 @@ def getUrlData(url):
             return None
 
         raw_title = titleEle.get_text(strip=True)
+        title = safe_translate(raw_title)
 
         subTitleEle = article.find("p", class_=re.compile(r"ue-c-article__standfirst", re.I))
-        raw_subTitle = subTitleEle.get_text(strip=True) if subTitleEle else ""
+        subTitle = safe_translate(subTitleEle.get_text(strip=True)) if subTitleEle else ""
 
         pTags = article.find_all("p", class_=re.compile(r"ue-c-article__paragraph", re.I))
-        raw_desc = pTags[0].get_text(strip=True) if pTags else ""
-        raw_desc = raw_desc[:700] if len(raw_desc) > 700 else raw_desc
+        if pTags:
+            desc_text = pTags[0].get_text(strip=True)[:700]
+            desc = safe_translate(desc_text)
+        else:
+            desc = ""
 
         authorEle = article.find("div", class_=re.compile(r"ue-c-article__byline-name", re.I)) or article.find("span", class_=re.compile(r"author", re.I))
-        raw_author = authorEle.get_text(strip=True) if authorEle else "MARCA"
+        authorName = safe_translate(authorEle.get_text(strip=True)) if authorEle else "MARCA"
 
         publishedAtEle = article.find("div", class_=re.compile(r"ue-c-article__publishdate", re.I))
-        raw_publishedAt = " ".join(publishedAtEle.get_text().split()) if publishedAtEle else ""
-
-        # Batch translate all texts in ONE request to avoid Google rate limit
-        texts_to_translate = [raw_title, raw_subTitle, raw_desc, raw_author, raw_publishedAt]
-        try:
-            time.sleep(2)
-            translated_texts = translator.translate_batch(texts_to_translate)
-            title, subTitle, desc, authorName, publishedAt = translated_texts
-        except Exception as e:
-            print(f"Translation Batch ERR: {e}")
-            title, subTitle, desc, authorName, publishedAt = raw_title, raw_subTitle, raw_desc, raw_author, raw_publishedAt
+        publishedAt = safe_translate(" ".join(publishedAtEle.get_text().split())) if publishedAtEle else ""
 
         subTitle = ("\n" + subTitle + "\n") if subTitle else ""
         desc = "\n" + desc + "\n" if desc else ""
@@ -89,7 +95,6 @@ response = requests.get(
 responseCode = response.status_code
 
 if responseCode == 200:
-    # Start
     print(f"Response Sucess: CODE IS: {responseCode}")
     soup = BeautifulSoup(response.text, "html.parser")
     articles = soup.find_all("article")
@@ -123,7 +128,6 @@ if responseCode == 200:
         raise Exception("No articles avaliable - Exitting...")
 
     if urls:
-        # Reverse URLS:
         urls.reverse()
         try:
             print("Getting articles from database...")
@@ -146,8 +150,6 @@ if responseCode == 200:
                     continue
 
                 caption, authorName = data
-                if not all([caption, authorName]):
-                    continue
 
                 imageUrl = articlesImages.get(url)
                 if not imageUrl:
@@ -162,7 +164,6 @@ if responseCode == 200:
 
                 photo = BytesIO(imageResponse.content)
 
-                # Send to telegram:
                 print("Send message to telegram - Sending...")
                 status = asyncio.run(
                     send_photo_message(
@@ -176,7 +177,6 @@ if responseCode == 200:
                 )
 
                 if status == True or status == "TIMEOUT":
-                    # Save to database:
                     print("Save url to database - Saving...")
                     save_to_database(
                         collection=realMadridArticlesCollection,
@@ -192,6 +192,5 @@ if responseCode == 200:
             print(e)
     else:
         raise Exception("Urls not avalibale - Exitting...")
-    # End
 else:
     raise Exception(f"🚫 Request Fail: {response.status_code} - Exitting...")
