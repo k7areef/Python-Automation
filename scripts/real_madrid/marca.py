@@ -3,6 +3,7 @@ import time
 import requests
 import asyncio
 from io import BytesIO
+from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
 
 BASE_URL = "https://www.marca.com"
@@ -13,30 +14,63 @@ HEADERS = {
     "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
 }
 
-def is_in_database(url):
-    # حط كود الفحص بتاعك هنا أو سيبها لو كانت Dummy
-    return False
-
-def save_to_database(collection, data):
-    # حط كود الحفظ بتاعك هنا
-    pass
+def get_articles_urls(response):
+    soup = BeautifulSoup(response.content, "html.parser")
+    urls = []
+    for a in soup.find_all('a', href=True):
+        href = a['href']
+        if '/futbol/real-madrid/' in href and href.endswith('.html'):
+            if not href.startswith('http'):
+                href = f"{BASE_URL}{href}"
+            if href not in urls:
+                urls.append(href)
+    return urls
 
 def get_article_data(url):
-    # حط دالة جلب البيانات الخاصة بيك هنا
-    pass
+    if "#" in url or "comentarios" in url:
+        return None, None
+
+    try:
+        res = requests.get(url, headers=HEADERS, timeout=10)
+        if res.status_code != 200:
+            return None, None
+
+        soup = BeautifulSoup(res.content, "html.parser")
+
+        # 1. Headline
+        title_tag = soup.find("h1", class_=re.compile(r"ue-c-article__headline", re.I)) or soup.find("h1")
+        caption = title_tag.get_text(strip=True) if title_tag else None
+
+        # 2. Author Name
+        author_tag = soup.find("span", class_=re.compile(r"ue-c-article__byline-name", re.I)) or soup.find("ul", class_=re.compile(r"ue-c-article__author", re.I))
+        authorName = author_tag.get_text(strip=True) if author_tag else "MARCA"
+
+        # 3. Translation
+        if caption:
+            try:
+                caption = GoogleTranslator(source="auto", target="ar").translate(caption)
+            except Exception as tr_err:
+                print(f"Translation Error: {tr_err}")
+
+        return caption, authorName
+
+    except Exception as e:
+        print(f"Error scraping {url}: {e}")
+        return None, None
 
 def articlesImageFetcher(url):
-    # حط دالة جلب الصور الخاصة بيك هنا
-    pass
-
-def get_articles_urls(response):
-    from bs4 import BeautifulSoup
-    soup = BeautifulSoup(response.content, "html.parser")
-    return [a['href'] for a in soup.find_all('a', href=True) if '/futbol/real-madrid/' in a['href']]
-
-async def send_photo_message(token, chat_id, caption, photo_url, source_url, buttonText):
-    # حط دالة إرسال تليجرام الخاصة بيك هنا
-    return True
+    try:
+        res = requests.get(url, headers=HEADERS, timeout=10)
+        if res.status_code != 200:
+            return None
+        soup = BeautifulSoup(res.content, "html.parser")
+        img_tag = soup.find("img", class_=re.compile(r"ue-c-article__media", re.I)) or soup.find("picture")
+        if img_tag:
+            img = img_tag.find("img") if img_tag.name == "picture" else img_tag
+            return img.get("src") or img.get("data-src")
+        return None
+    except Exception:
+        return None
 
 response = requests.get(NEWS_URL, headers=HEADERS)
 
@@ -51,16 +85,17 @@ if response.status_code == 200:
     if articles_urls:
         try:
             for url in articles_urls:
-                if not url.startswith("http"):
-                    url = f"{BASE_URL}{url}"
-
                 if is_in_database(url):
                     continue
 
                 print("⌛ Url not in database - Working")
 
                 try:
-                    caption, authorName = get_article_data(url)
+                    data = get_article_data(url)
+                    if isinstance(data, (list, tuple)) and len(data) == 2:
+                        caption, authorName = data
+                    else:
+                        caption, authorName = None, None
                 except Exception as e:
                     print(f"Exception ERR: {e}")
                     caption, authorName = None, None
