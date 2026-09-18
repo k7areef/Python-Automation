@@ -20,8 +20,8 @@ MONGO_URI = os.getenv("MONGO_URI")
 if not all([TELEGRAM_TOKEN_REAL_MADRID, TELEGRAM_CHAT_ID, MONGO_URI]):
     raise Exception("Missing environment variables")
 
-# RSS Feed الخاص ببرشلونة/ريال مدريد في صحيفة أس (ضد الحظر)
-RSS_FEED_URL = "https://as.com/rss/futbol/real_madrid.xml"
+# رابط الـ RSS المباشر والشغال
+RSS_FEED_URL = "https://as.com/rss/futbol/real_madrid/portada.xml"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
