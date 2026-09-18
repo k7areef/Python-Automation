@@ -2,7 +2,6 @@ import os
 import asyncio
 import requests
 from bs4 import BeautifulSoup
-from deep_translator import GoogleTranslator
 from shared.database_service import get_collection, save_to_database, url_exists
 from shared.telegram_service import send_photo_message
 from dotenv import load_dotenv
@@ -19,21 +18,38 @@ load_dotenv()
 TELEGRAM_TOKEN_REAL_MADRID = os.getenv("TELEGRAM_TOKEN_REAL_MADRID")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 MONGO_URI = os.getenv("MONGO_URI")
+
 if not all([TELEGRAM_TOKEN_REAL_MADRID, TELEGRAM_CHAT_ID, MONGO_URI]):
     raise Exception("Missing environment variables")
-translator = GoogleTranslator(source="auto", target="ar")
+
+
+def translate_batch(texts):
+    """ترجمة مجموعة نصوص في طلب واحد لتفادي Rate Limits"""
+    if not texts or not any(texts):
+        return texts
+
+    joined_text = " ||| ".join(texts)
+    url = f"https://api.mymemory.translated.net/get?q={requests.utils.quote(joined_text)}&langpair=es|ar"
+
+    for attempt in range(3):
+        try:
+            res = requests.get(url, timeout=10)
+            if res.status_code == 200:
+                data = res.json()
+                translated_joined = data.get("responseData", {}).get("translatedText", "")
+                if translated_joined:
+                    translated_list = translated_joined.split(" ||| ")
+                    if len(translated_list) == len(texts):
+                        return translated_list
+        except Exception as e:
+            print(f"Translation ERR (Attempt {attempt + 1}): {e}")
+
+    return texts
 
 
 def getUrlData(url):
     try:
-
-        title = ""
-        imageUrl = ""
-        subTitle = ""
-        authorName = ""
-        publishedAt = ""
-
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, headers=HEADERS, timeout=10)
         if response.status_code != 200:
             return None
 
@@ -47,31 +63,39 @@ def getUrlData(url):
         imageContainerEle = article.find("div", class_="a_e_m")
         if not all([titleEle, imageContainerEle]):
             return None
-        title = translator.translate(titleEle.get_text(strip=True))
-        imageUrl = imageContainerEle.find("img").get("src")
+
+        raw_title = titleEle.get_text(strip=True)
+        img_tag = imageContainerEle.find("img")
+        imageUrl = img_tag.get("src") if img_tag else ""
 
         # Author:
         authorEle = article.find("a", class_="a_md_a_n")
-        authorName = translator.translate(authorEle.get_text(strip=True))
+        raw_authorName = authorEle.get_text(strip=True) if authorEle else "صحيفة أس"
 
         # Description:
         subTitleEle = article.find(class_="a_st")
-        if subTitleEle:
-            subTitle = translator.translate(subTitleEle.get_text(strip=True))
-        if subTitle:
-            if len(subTitle) > 800:
-                subTitle = f"{subTitle[:800]}...\n\n"
-            else:
-                subTitle = f"\n\n{subTitle}"
+        raw_subTitle = subTitleEle.get_text(strip=True) if subTitleEle else ""
+        if len(raw_subTitle) > 800:
+            raw_subTitle = raw_subTitle[:800]
 
         # Published At:
         publishedAtEle = article.find("div", class_="a_md_f")
-        if publishedAtEle:
-            publishedAt = translator.translate(publishedAtEle.get_text(strip=True))
+        raw_publishedAt = publishedAtEle.get_text(strip=True) if publishedAtEle else ""
 
-        caption = f"<b>{title}</b>" f"{subTitle}" f"\n\n{publishedAt}"
+        # Batch Translation in 1 Request:
+        raw_texts = [raw_title, raw_subTitle, raw_authorName, raw_publishedAt]
+        translated = translate_batch(raw_texts)
+
+        title, subTitle, authorName, publishedAt = translated
+
+        if subTitle:
+            subTitle = f"\n\n{subTitle}"
+
+        caption = f"<b>{title}</b>{subTitle}\n\n{publishedAt}"
         return caption, imageUrl, authorName
-    except Exception:
+
+    except Exception as e:
+        print(f"Exception ERR in getUrlData: {e}")
         return None
 
 
@@ -82,11 +106,15 @@ response = requests.get(
     headers=HEADERS,
     timeout=10,
 )
-if response.status_code == 200:
 
-    # Start
+if response.status_code == 200:
     soup = BeautifulSoup(response.text, "html.parser")
     linksContainer = soup.find("div", class_="b_gr b_gr-nh")
+
+    if not linksContainer:
+        print("Links container not found - Exitting...")
+        exit()
+
     articles = linksContainer.find_all("div", class_="s_h")
     urls = []
 
@@ -96,7 +124,7 @@ if response.status_code == 200:
             if not hTag:
                 continue
             aTag = hTag.find("a")
-            if not hTag:
+            if not aTag:
                 continue
             url = aTag.get("href")
             if not url:
@@ -106,11 +134,9 @@ if response.status_code == 200:
         print("No articles avaliable - Exitting...")
 
     if urls:
-        # Reverse URLS:
         urls.reverse()
 
         try:
-
             print("Getting articles from database...")
             realMadridArticlesCollection = get_collection(
                 uri=MONGO_URI, collection_name=COLLECTION_NAME, db_name="my_db"
@@ -122,13 +148,19 @@ if response.status_code == 200:
                 if url_exists(collection=realMadridArticlesCollection, url=url):
                     print("☑️ Url in database - Skipping")
                     continue
+
                 print("\n⌛ Url not in database - Working")
                 data = getUrlData(url)
                 if not data:
                     print("Faild to get url page - Skipping\n")
                     continue
+
                 caption, imageUrl, authorName = data
-                # Send to telegram:
+
+                if not imageUrl:
+                    print("Missing Image URL - Skipping\n")
+                    continue
+
                 print("Send message to telegram - Sending...")
                 status = asyncio.run(
                     send_photo_message(
@@ -142,7 +174,6 @@ if response.status_code == 200:
                 )
 
                 if status == True or status == "TIMEOUT":
-                    # Save to database:
                     print("Save url to database - Saving...")
                     save_to_database(
                         collection=realMadridArticlesCollection,
@@ -157,7 +188,5 @@ if response.status_code == 200:
             print(e)
     else:
         print("Urls not avalibale - Exitting...")
-    # End
-
 else:
     print(f"🚫 Request Fail: {response.status_code} - Exitting...")
