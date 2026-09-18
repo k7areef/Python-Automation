@@ -54,22 +54,20 @@ def getUrlData(url):
             return None
 
         soup = BeautifulSoup(response.text, "html.parser")
-        article = soup.find("article")
-        if not article:
-            return None
+        article = soup.find("article") or soup
 
         # Image and Title:
-        titleEle = article.find("h1", class_="a_t")
-        imageContainerEle = article.find("div", class_="a_e_m")
-        if not all([titleEle, imageContainerEle]):
+        titleEle = article.find("h1", class_="a_t") or article.find("h1")
+        imageContainerEle = article.find("div", class_="a_e_m") or article.find("figure")
+        if not titleEle:
             return None
 
         raw_title = titleEle.get_text(strip=True)
-        img_tag = imageContainerEle.find("img")
-        imageUrl = img_tag.get("src") if img_tag else ""
+        img_tag = imageContainerEle.find("img") if imageContainerEle else article.find("img")
+        imageUrl = img_tag.get("src") or img_tag.get("data-src") if img_tag else ""
 
         # Author:
-        authorEle = article.find("a", class_="a_md_a_n")
+        authorEle = article.find("a", class_="a_md_a_n") or article.find("span", class_="a_md_a_n")
         raw_authorName = authorEle.get_text(strip=True) if authorEle else "صحيفة أس"
 
         # Description:
@@ -79,7 +77,7 @@ def getUrlData(url):
             raw_subTitle = raw_subTitle[:800]
 
         # Published At:
-        publishedAtEle = article.find("div", class_="a_md_f")
+        publishedAtEle = article.find("div", class_="a_md_f") or article.find("time")
         raw_publishedAt = publishedAtEle.get_text(strip=True) if publishedAtEle else ""
 
         # Batch Translation in 1 Request:
@@ -101,37 +99,27 @@ def getUrlData(url):
 
 print("Run Real Madrid.As Script")
 
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+}
+
 response = requests.get(
     url=NEWS_URL,
-    headers=HEADERS,
+    headers=headers,
     timeout=10,
 )
 
 if response.status_code == 200:
     soup = BeautifulSoup(response.text, "html.parser")
-    linksContainer = soup.find("div", class_="b_gr b_gr-nh")
-
-    if not linksContainer:
-        print("Links container not found - Exitting...")
-        exit()
-
-    articles = linksContainer.find_all("div", class_="s_h")
     urls = []
 
-    if articles:
-        for article in articles:
-            hTag = article.find("h3", class_="s_t")
-            if not hTag:
-                continue
-            aTag = hTag.find("a")
-            if not aTag:
-                continue
-            url = aTag.get("href")
-            if not url:
-                continue
-            urls.append(url)
-    else:
-        print("No articles avaliable - Exitting...")
+    # البحث الشامل عن المقالات عبر الوسوم المعتادة
+    for aTag in soup.find_all("a", href=True):
+        href = aTag["href"]
+        # تصفية الروابط لتأكيد أنها مقالات رياضية وليست صفحات داخلية
+        if "/futbol/real_madrid/" in href or "/futbol/20" in href:
+            if href.endswith(".html") and href not in urls:
+                urls.append(href)
 
     if urls:
         urls.reverse()
