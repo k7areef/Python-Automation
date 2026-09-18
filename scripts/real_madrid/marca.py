@@ -21,11 +21,17 @@ if response.status_code == 200:
     print("Getting articles from database...")
     print("Get articles from database successfully\n")
     
-    articles_urls = get_articles_urls(response)
+    # Extraction logic for article links directly without undefined functions
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(response.content, "html.parser")
+    articles_urls = [a['href'] for a in soup.find_all('a', href=True) if '/futbol/real-madrid/' in a['href']]
 
     if articles_urls:
         try:
             for url in articles_urls:
+                if not url.startswith("http"):
+                    url = f"{BASE_URL}{url}"
+
                 if is_in_database(url):
                     continue
 
