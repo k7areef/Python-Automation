@@ -1,5 +1,5 @@
+python-telegram-bot
 requests
 beautifulsoup4
-lxml
 pymongo
 python-dotenv
