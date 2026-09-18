@@ -6,10 +6,10 @@ from io import BytesIO
 from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
 
-# Import local modules from project root
+# استيراد الدوال الصح حسب اللي في الصورة عندك
 try:
     from utils import (
-        is_in_database,
+        url_exists,
         save_to_database,
         send_photo_message,
         TELEGRAM_BOT_TOKEN,
@@ -18,7 +18,7 @@ try:
     )
 except ImportError:
     try:
-        from database import is_in_database, save_to_database, realMadridCollection
+        from database import url_exists, save_to_database, realMadridCollection
         from telegram import send_photo_message, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
     except ImportError:
         pass
@@ -102,7 +102,8 @@ if response.status_code == 200:
     if articles_urls:
         try:
             for url in articles_urls:
-                if is_in_database(url):
+                # استخدام url_exists وتمرير الـ collection والـ url
+                if url_exists(realMadridCollection, url):
                     continue
 
                 print("⌛ Url not in database - Working")
