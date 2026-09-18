@@ -1,159 +1,202 @@
+import os
 import re
-import time
-import requests
 import asyncio
+import requests
 from io import BytesIO
 from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
+from shared.database_service import get_collection, save_to_database, url_exists
+from shared.telegram_service import send_photo_message
+from dotenv import load_dotenv
+from scripts.real_madrid.configs.marca_config import (
+    NEWS_URL,
+    HEADERS,
+    COLLECTION_NAME,
+    SOURCE_NAME,
+)
 
-# Imports بناءً على هيكل المشروع عندك
-from shared.database_service import url_exists, save_to_database, realMadridCollection
-from shared.telegram_service import send_photo_message, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+load_dotenv()
 
-BASE_URL = "https://www.marca.com"
-NEWS_URL = f"{BASE_URL}/futbol/real-madrid.html"
+# Secret Keys:
+TELEGRAM_TOKEN_REAL_MADRID = os.getenv("TELEGRAM_TOKEN_REAL_MADRID")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+MONGO_URI = os.getenv("MONGO_URI")
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
-}
+if not all([TELEGRAM_TOKEN_REAL_MADRID, TELEGRAM_CHAT_ID, MONGO_URI]):
+    raise Exception("Missing environment variables")
 
-def get_articles_urls(response):
-    soup = BeautifulSoup(response.content, "html.parser")
-    urls = []
-    for a in soup.find_all('a', href=True):
-        href = a['href']
-        if '/futbol/real-madrid/' in href and href.endswith('.html'):
-            if not href.startswith('http'):
-                href = f"{BASE_URL}{href}"
-            if href not in urls:
-                urls.append(href)
-    return urls
+translator = GoogleTranslator(source="auto", target="ar")
 
-def get_article_data(url):
-    if "#" in url or "comentarios" in url:
-        return None, None
-
+def getUrlData(url):
     try:
-        res = requests.get(url, headers=HEADERS, timeout=10)
-        if res.status_code != 200:
-            return None, None
+        title = ""
+        subTitle = ""
+        desc = ""
+        authorName = ""
+        publishedAt = ""
+        
+        response = requests.get(url, headers=HEADERS, timeout=10)
+        if response.status_code != 200:
+            return None
 
-        soup = BeautifulSoup(res.content, "html.parser")
+        soup = BeautifulSoup(response.text, "html.parser")
+        article = soup.find("article") or soup
 
-        # Headline
-        title_tag = soup.find("h1", class_=re.compile(r"ue-c-article__headline", re.I)) or soup.find("h1")
-        caption = title_tag.get_text(strip=True) if title_tag else None
+        titleEle = article.find("h1", class_=re.compile(r"ue-c-article__headline", re.I)) or article.find("h1")
+        if not titleEle:
+            print("❗ Missing elements - Skipping")
+            print(f"🔗 URL for checking: {url}\n")
+            return None
 
-        # Author Name
-        author_tag = soup.find("span", class_=re.compile(r"ue-c-article__byline-name", re.I)) or soup.find("ul", class_=re.compile(r"ue-c-article__author", re.I))
-        authorName = author_tag.get_text(strip=True) if author_tag else "MARCA"
+        title = translator.translate(titleEle.get_text(strip=True))
 
-        # Translation
-        if caption:
-            try:
-                caption = GoogleTranslator(source="auto", target="ar").translate(caption)
-            except Exception as tr_err:
-                print(f"Translation Error: {tr_err}")
+        subTitleEle = article.find("p", class_=re.compile(r"ue-c-article__standfirst", re.I))
+        if subTitleEle:
+            subTitle = translator.translate(subTitleEle.get_text(strip=True))
+
+        pTags = article.find_all("p", class_=re.compile(r"ue-c-article__paragraph", re.I))
+        if pTags:
+            desc = pTags[0].get_text(strip=True)
+            desc = translator.translate(desc)
+            desc = f"{desc[:700]}..." if len(desc) > 700 else desc
+
+        # Author:
+        authorEle = article.find("div", class_=re.compile(r"ue-c-article__byline-name", re.I)) or article.find("span", class_=re.compile(r"author", re.I))
+        if authorEle:
+            authorName = translator.translate(authorEle.get_text(strip=True))
+        else:
+            authorName = "MARCA"
+
+        # Published At:
+        publishedAtEle = article.find("div", class_=re.compile(r"ue-c-article__publishdate", re.I))
+        if publishedAtEle:
+            publishedAt = " ".join(publishedAtEle.get_text().split())
+            publishedAt = translator.translate(publishedAt)
+
+        subTitle = ("\n" + subTitle + "\n") if subTitle else ""
+        desc = "\n" + desc + "\n" if desc else ""
+        caption = f"<b>{title}</b>\n" f"{subTitle}" f"{desc}" f"\n\n{publishedAt}"
 
         return caption, authorName
 
     except Exception as e:
-        print(f"Error scraping {url}: {e}")
-        return None, None
-
-def articlesImageFetcher(url):
-    try:
-        res = requests.get(url, headers=HEADERS, timeout=10)
-        if res.status_code != 200:
-            return None
-        soup = BeautifulSoup(res.content, "html.parser")
-        img_tag = soup.find("img", class_=re.compile(r"ue-c-article__media", re.I)) or soup.find("picture")
-        if img_tag:
-            img = img_tag.find("img") if img_tag.name == "picture" else img_tag
-            return img.get("src") or img.get("data-src")
-        return None
-    except Exception:
+        print(f"Exception ERR: {e}")
         return None
 
-response = requests.get(NEWS_URL, headers=HEADERS)
+print("\nmarca Script is Running...")
 
-if response.status_code == 200:
-    print("marca Script is Running...")
-    print(f"Response Sucess: CODE IS: {response.status_code}")
-    print("Getting articles from database...")
-    print("Get articles from database successfully\n")
-    
-    articles_urls = get_articles_urls(response)
+response = requests.get(
+    url=NEWS_URL,
+    headers=HEADERS,
+    timeout=10,
+)
 
-    if articles_urls:
+responseCode = response.status_code
+
+if responseCode == 200:
+    # Start
+    print(f"Response Sucess: CODE IS: {responseCode}")
+    soup = BeautifulSoup(response.text, "html.parser")
+    articles = soup.find_all("article")
+    articlesImages = {}
+    urls = []
+
+    if articles:
+        for article in articles:
+            articleHeader = article.find("header")
+            if not articleHeader:
+                continue
+
+            aTag = articleHeader.find("a")
+            if not aTag:
+                continue
+
+            url = aTag.get("href")
+            if not url:
+                continue
+
+            urls.append(url)
+
+            imageEle = article.find("img", class_=re.compile(r"ue-c-cover-content__image", re.I)) or article.find("img")
+            if not imageEle:
+                continue
+
+            imageSrc = imageEle.get("src") or imageEle.get("data-src")
+            if imageSrc:
+                articlesImages[url] = imageSrc
+    else:
+        raise Exception("No articles avaliable - Exitting...")
+
+    if urls:
+        # Reverse URLS:
+        urls.reverse()
         try:
-            for url in articles_urls:
-                if url_exists(realMadridCollection, url):
+            print("Getting articles from database...")
+            realMadridArticlesCollection = get_collection(
+                uri=MONGO_URI, collection_name=COLLECTION_NAME, db_name="my_db"
+            )
+            print(f"Get articles from database successfully\n")
+
+            for url in urls:
+                if url_exists(collection=realMadridArticlesCollection, url=url):
+                    print("☑️ Url in database - Continue")
                     continue
 
-                print("⌛ Url not in database - Working")
+                print("\n⌛ Url not in database - Working")
+                data = getUrlData(url)
 
-                try:
-                    data = get_article_data(url)
-                    if isinstance(data, (list, tuple)) and len(data) == 2:
-                        caption, authorName = data
-                    else:
-                        caption, authorName = None, None
-                except Exception as e:
-                    print(f"Exception ERR: {e}")
-                    caption, authorName = None, None
-
-                if not all([caption, authorName]):
+                if not data:
                     print("❗ No data avaliable - Skipping")
                     print(f"🔗 URL for checking: {url}\n")
                     continue
 
-                imageUrl = articlesImageFetcher(url)
+                caption, authorName = data
+                if not all([caption, authorName]):
+                    continue
+
+                imageUrl = articlesImages.get(url)
                 if not imageUrl:
                     continue
 
-                imageUrl = re.sub(r"(?<=/)\d+x\d+(?=/)", "1200x675", imageUrl)
+                imageUrl = re.sub(r"(?<!:)//", "/", imageUrl)
                 imageResponse = requests.get(imageUrl, headers=HEADERS)
 
                 if not imageResponse.status_code == 200:
-                    print("Fail to get image")
+                    print("Fail to get image - Continue")
                     continue
 
                 photo = BytesIO(imageResponse.content)
 
                 # Send to telegram:
-                print("Send message to telegram...")
+                print("Send message to telegram - Sending...")
                 status = asyncio.run(
                     send_photo_message(
-                        token=TELEGRAM_BOT_TOKEN,
+                        token=TELEGRAM_TOKEN_REAL_MADRID,
                         chat_id=TELEGRAM_CHAT_ID,
                         caption=caption,
                         photo_url=photo,
                         source_url=url,
-                        buttonText=f"Read on {authorName}"
+                        buttonText=f"{authorName} عبر صحيفة ماركا",
                     )
                 )
 
-                if status == True or status == "success":
+                if status == True or status == "TIMEOUT":
                     # Save to database:
-                    print("Save url to database...")
+                    print("Save url to database - Saving...")
                     save_to_database(
-                        collection=realMadridCollection,
-                        data={"article_url": url}
+                        collection=realMadridArticlesCollection,
+                        data={"article_url": url, "source": SOURCE_NAME},
                     )
-                    print("✅ Url saved to database")
+                    print("✅ Url saved to database successfully\n")
                 else:
-                    print("Message fail to send")
-
-                time.sleep(2)
+                    print("Message failed strictly. Not saving to DB - Skipping\n")
 
             print("\n✅ All Done - Exiting")
 
         except Exception as e:
             print(e)
     else:
-        raise Exception("Urls not avaliable")
-
+        raise Exception("Urls not avalibale - Exitting...")
+    # End
 else:
-    raise Exception(f"🚫 Request Fail: {response.status_code} - Exiting...")
+    raise Exception(f"🚫 Request Fail: {response.status_code} - Exitting...")
