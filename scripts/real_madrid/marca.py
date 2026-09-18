@@ -1,5 +1,6 @@
 import os
 import re
+import time
 import asyncio
 import requests
 from io import BytesIO
@@ -27,6 +28,16 @@ if not all([TELEGRAM_TOKEN_REAL_MADRID, TELEGRAM_CHAT_ID, MONGO_URI]):
 
 translator = GoogleTranslator(source="auto", target="ar")
 
+def safe_translate(text):
+    if not text:
+        return ""
+    try:
+        time.sleep(1.5)  # Delay لمنع Rate Limit من جوجل
+        return translator.translate(text)
+    except Exception as e:
+        print(f"Translation ERR: {e}")
+        return text
+
 def getUrlData(url):
     try:
         title = ""
@@ -48,22 +59,22 @@ def getUrlData(url):
             print(f"🔗 URL for checking: {url}\n")
             return None
 
-        title = translator.translate(titleEle.get_text(strip=True))
+        title = safe_translate(titleEle.get_text(strip=True))
 
         subTitleEle = article.find("p", class_=re.compile(r"ue-c-article__standfirst", re.I))
         if subTitleEle:
-            subTitle = translator.translate(subTitleEle.get_text(strip=True))
+            subTitle = safe_translate(subTitleEle.get_text(strip=True))
 
         pTags = article.find_all("p", class_=re.compile(r"ue-c-article__paragraph", re.I))
         if pTags:
             desc = pTags[0].get_text(strip=True)
-            desc = translator.translate(desc)
+            desc = safe_translate(desc)
             desc = f"{desc[:700]}..." if len(desc) > 700 else desc
 
         # Author:
         authorEle = article.find("div", class_=re.compile(r"ue-c-article__byline-name", re.I)) or article.find("span", class_=re.compile(r"author", re.I))
         if authorEle:
-            authorName = translator.translate(authorEle.get_text(strip=True))
+            authorName = safe_translate(authorEle.get_text(strip=True))
         else:
             authorName = "MARCA"
 
@@ -71,7 +82,7 @@ def getUrlData(url):
         publishedAtEle = article.find("div", class_=re.compile(r"ue-c-article__publishdate", re.I))
         if publishedAtEle:
             publishedAt = " ".join(publishedAtEle.get_text().split())
-            publishedAt = translator.translate(publishedAt)
+            publishedAt = safe_translate(publishedAt)
 
         subTitle = ("\n" + subTitle + "\n") if subTitle else ""
         desc = "\n" + desc + "\n" if desc else ""
