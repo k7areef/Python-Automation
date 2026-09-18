@@ -1,6 +1,5 @@
-python-telegram-bot
-beautifulsoup4
 requests
+beautifulsoup4
+lxml
 pymongo
 python-dotenv
-deep-translator
