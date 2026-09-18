@@ -1,7 +1,7 @@
-requests
+python-telegram-bot>=20.7
+googletrans==3.1.0a0
 beautifulsoup4
+requests
 pymongo
 python-dotenv
-python-telegram-bot
-deep_translator
-googletrans==3.1.0a0
+deep-translator
