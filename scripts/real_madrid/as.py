@@ -6,8 +6,6 @@ from shared.database_service import get_collection, save_to_database, url_exists
 from shared.telegram_service import send_photo_message
 from dotenv import load_dotenv
 from scripts.real_madrid.configs.as_config import (
-    NEWS_URL,
-    HEADERS,
     COLLECTION_NAME,
     SOURCE_NAME,
 )
@@ -22,6 +20,12 @@ MONGO_URI = os.getenv("MONGO_URI")
 if not all([TELEGRAM_TOKEN_REAL_MADRID, TELEGRAM_CHAT_ID, MONGO_URI]):
     raise Exception("Missing environment variables")
 
+# RSS Feed الخاص ببرشلونة/ريال مدريد في صحيفة أس (ضد الحظر)
+RSS_FEED_URL = "https://as.com/rss/futbol/real_madrid.xml"
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+}
 
 def translate_batch(texts):
     """ترجمة مجموعة نصوص في طلب واحد لتفادي Rate Limits"""
@@ -56,7 +60,6 @@ def getUrlData(url):
         soup = BeautifulSoup(response.text, "html.parser")
         article = soup.find("article") or soup
 
-        # Image and Title:
         titleEle = article.find("h1", class_="a_t") or article.find("h1")
         imageContainerEle = article.find("div", class_="a_e_m") or article.find("figure")
         if not titleEle:
@@ -66,21 +69,17 @@ def getUrlData(url):
         img_tag = imageContainerEle.find("img") if imageContainerEle else article.find("img")
         imageUrl = img_tag.get("src") or img_tag.get("data-src") if img_tag else ""
 
-        # Author:
         authorEle = article.find("a", class_="a_md_a_n") or article.find("span", class_="a_md_a_n")
         raw_authorName = authorEle.get_text(strip=True) if authorEle else "صحيفة أس"
 
-        # Description:
         subTitleEle = article.find(class_="a_st")
         raw_subTitle = subTitleEle.get_text(strip=True) if subTitleEle else ""
         if len(raw_subTitle) > 800:
             raw_subTitle = raw_subTitle[:800]
 
-        # Published At:
         publishedAtEle = article.find("div", class_="a_md_f") or article.find("time")
         raw_publishedAt = publishedAtEle.get_text(strip=True) if publishedAtEle else ""
 
-        # Batch Translation in 1 Request:
         raw_texts = [raw_title, raw_subTitle, raw_authorName, raw_publishedAt]
         translated = translate_batch(raw_texts)
 
@@ -99,32 +98,21 @@ def getUrlData(url):
 
 print("Run Real Madrid.As Script")
 
-headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-}
+try:
+    response = requests.get(RSS_FEED_URL, headers=HEADERS, timeout=10)
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.content, "xml")
+        items = soup.find_all("item")
+        urls = []
 
-response = requests.get(
-    url=NEWS_URL,
-    headers=headers,
-    timeout=10,
-)
+        for item in items:
+            link = item.find("link")
+            if link and link.text:
+                urls.append(link.text.strip())
 
-if response.status_code == 200:
-    soup = BeautifulSoup(response.text, "html.parser")
-    urls = []
+        if urls:
+            urls.reverse()
 
-    # البحث الشامل عن المقالات عبر الوسوم المعتادة
-    for aTag in soup.find_all("a", href=True):
-        href = aTag["href"]
-        # تصفية الروابط لتأكيد أنها مقالات رياضية وليست صفحات داخلية
-        if "/futbol/real_madrid/" in href or "/futbol/20" in href:
-            if href.endswith(".html") and href not in urls:
-                urls.append(href)
-
-    if urls:
-        urls.reverse()
-
-        try:
             print("Getting articles from database...")
             realMadridArticlesCollection = get_collection(
                 uri=MONGO_URI, collection_name=COLLECTION_NAME, db_name="my_db"
@@ -172,9 +160,9 @@ if response.status_code == 200:
                     print("Message failed strictly. Not saving to DB - Skipping\n")
 
             print("\n✅ All Done - Exiting")
-        except Exception as e:
-            print(e)
+        else:
+            print("Urls not avalibale - Exitting...")
     else:
-        print("Urls not avalibale - Exitting...")
-else:
-    print(f"🚫 Request Fail: {response.status_code} - Exitting...")
+        print(f"🚫 Request Fail: {response.status_code} - Exitting...")
+except Exception as e:
+    print(f"Error fetching RSS: {e}")
