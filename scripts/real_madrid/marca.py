@@ -1,4 +1,5 @@
 import os
+import re
 import asyncio
 import requests
 import xml.etree.ElementTree as ET
