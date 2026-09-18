@@ -1,6 +1,7 @@
 import os
 import asyncio
 import requests
+import xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup
 from shared.database_service import get_collection, save_to_database, url_exists
 from shared.telegram_service import send_photo_message
@@ -92,7 +93,7 @@ def getUrlData(url):
 def fetch_urls():
     sources = [
         ("RSS Football", "https://as.com/rss/futbol/primera.xml"),
-        ("RSS General", "https://as.com/rss/portada.xml"),
+        ("RSS Merged", "https://feeds.elpais.com/mrss-s/pages/ep/site/as.com/portada"),
     ]
 
     for source_type, target_url in sources:
@@ -104,11 +105,11 @@ def fetch_urls():
                 continue
 
             urls = []
-            soup = BeautifulSoup(res.content, "xml")
-            items = soup.find_all("item")
-            for item in items:
+            # استخدام ElementTree المدمجة في python لقراءة XML بدون أي مكتبات خارجية
+            root = ET.fromstring(res.content)
+            for item in root.findall(".//item"):
                 link = item.find("link")
-                if link and link.text:
+                if link is not None and link.text:
                     href = link.text.strip()
                     if "/real_madrid/" in href or "/futbol/" in href:
                         if href not in urls:
