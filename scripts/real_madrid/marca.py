@@ -6,6 +6,23 @@ from io import BytesIO
 from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
 
+# Import local modules from project root
+try:
+    from utils import (
+        is_in_database,
+        save_to_database,
+        send_photo_message,
+        TELEGRAM_BOT_TOKEN,
+        TELEGRAM_CHAT_ID,
+        realMadridCollection
+    )
+except ImportError:
+    try:
+        from database import is_in_database, save_to_database, realMadridCollection
+        from telegram import send_photo_message, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+    except ImportError:
+        pass
+
 BASE_URL = "https://www.marca.com"
 NEWS_URL = f"{BASE_URL}/futbol/real-madrid.html"
 
@@ -37,15 +54,15 @@ def get_article_data(url):
 
         soup = BeautifulSoup(res.content, "html.parser")
 
-        # 1. Headline
+        # Headline
         title_tag = soup.find("h1", class_=re.compile(r"ue-c-article__headline", re.I)) or soup.find("h1")
         caption = title_tag.get_text(strip=True) if title_tag else None
 
-        # 2. Author Name
+        # Author Name
         author_tag = soup.find("span", class_=re.compile(r"ue-c-article__byline-name", re.I)) or soup.find("ul", class_=re.compile(r"ue-c-article__author", re.I))
         authorName = author_tag.get_text(strip=True) if author_tag else "MARCA"
 
-        # 3. Translation
+        # Translation
         if caption:
             try:
                 caption = GoogleTranslator(source="auto", target="ar").translate(caption)
