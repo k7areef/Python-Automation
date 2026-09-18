@@ -6,22 +6,9 @@ from io import BytesIO
 from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
 
-# استيراد الدوال الصح حسب اللي في الصورة عندك
-try:
-    from utils import (
-        url_exists,
-        save_to_database,
-        send_photo_message,
-        TELEGRAM_BOT_TOKEN,
-        TELEGRAM_CHAT_ID,
-        realMadridCollection
-    )
-except ImportError:
-    try:
-        from database import url_exists, save_to_database, realMadridCollection
-        from telegram import send_photo_message, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
-    except ImportError:
-        pass
+# Imports بناءً على هيكل المشروع عندك
+from shared.database_service import url_exists, save_to_database, realMadridCollection
+from shared.telegram_service import send_photo_message, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 
 BASE_URL = "https://www.marca.com"
 NEWS_URL = f"{BASE_URL}/futbol/real-madrid.html"
@@ -102,7 +89,6 @@ if response.status_code == 200:
     if articles_urls:
         try:
             for url in articles_urls:
-                # استخدام url_exists وتمرير الـ collection والـ url
                 if url_exists(realMadridCollection, url):
                     continue
 
