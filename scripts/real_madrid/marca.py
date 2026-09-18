@@ -13,6 +13,31 @@ HEADERS = {
     "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
 }
 
+def is_in_database(url):
+    # حط كود الفحص بتاعك هنا أو سيبها لو كانت Dummy
+    return False
+
+def save_to_database(collection, data):
+    # حط كود الحفظ بتاعك هنا
+    pass
+
+def get_article_data(url):
+    # حط دالة جلب البيانات الخاصة بيك هنا
+    pass
+
+def articlesImageFetcher(url):
+    # حط دالة جلب الصور الخاصة بيك هنا
+    pass
+
+def get_articles_urls(response):
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(response.content, "html.parser")
+    return [a['href'] for a in soup.find_all('a', href=True) if '/futbol/real-madrid/' in a['href']]
+
+async def send_photo_message(token, chat_id, caption, photo_url, source_url, buttonText):
+    # حط دالة إرسال تليجرام الخاصة بيك هنا
+    return True
+
 response = requests.get(NEWS_URL, headers=HEADERS)
 
 if response.status_code == 200:
@@ -21,10 +46,7 @@ if response.status_code == 200:
     print("Getting articles from database...")
     print("Get articles from database successfully\n")
     
-    # Extraction logic for article links directly without undefined functions
-    from bs4 import BeautifulSoup
-    soup = BeautifulSoup(response.content, "html.parser")
-    articles_urls = [a['href'] for a in soup.find_all('a', href=True) if '/futbol/real-madrid/' in a['href']]
+    articles_urls = get_articles_urls(response)
 
     if articles_urls:
         try:
