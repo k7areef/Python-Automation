@@ -3,4 +3,4 @@ beautifulsoup4
 requests
 pymongo
 python-dotenv
-googletrans
+deep-translator
